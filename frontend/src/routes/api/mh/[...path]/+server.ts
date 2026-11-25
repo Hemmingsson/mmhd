@@ -32,7 +32,9 @@ async function proxy(
   // actions (ffmpeg + Whisper, or chunked LLM calls), so they get a much longer window — each is
   // bounded server-side by its own TimeoutSeconds. Aborting early would also cancel the API-side work.
   const isLongRunning =
-    pathSegments.endsWith('/lyrics/transcribe') || pathSegments.endsWith('/lyrics/translate');
+    pathSegments.endsWith('/lyrics/transcribe') ||
+    pathSegments.endsWith('/lyrics/translate') ||
+    (method === 'POST' && pathSegments === 'api/catalog/discogs/releases/queue');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), isLongRunning ? 240_000 : 10_000);
 

@@ -109,12 +109,14 @@ public static class CatalogEndpoints
 
         var ids = releaseIds.Distinct().ToArray();
         var budget = Math.Max(1, options.Value.ArtistRequestMaxTracks);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         var queued = 0;
         var started = false;
         var results = new List<ArtistDiscographyEndpoints.AcquireReleaseResult>();
         foreach (var id in ids.Take(200))
         {
-            if (queued >= budget) break;
+            // Leave time to finish the current provider lookup and return its committed counts.
+            if (queued >= budget || elapsed.Elapsed >= TimeSpan.FromSeconds(90)) break;
             var release = await fetcher.EnsureReleaseAsync(id, ct: ct);
             var result = release == null ? null :
                 await acquisition.AcquireAsync(user.UserId, release.Id, null, ct, budget - queued);
