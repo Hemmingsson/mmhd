@@ -1,0 +1,69 @@
+{
+ "pagination": {
+  "page": 1,
+  "pages": 1712,
+  "per_page": 5,
+  "items": 8560,
+  "urls": {
+   "last": "https://api.discogs.com/labels/23528/releases?per_page=5&page=1712",
+   "next": "https://api.discogs.com/labels/23528/releases?per_page=5&page=2"
+  }
+ },
+ "releases": [
+  {
+   "status": "Accepted",
+   "format": "12\", EP, Mono, Ltd",
+   "catno": "WAP 67",
+   "thumb": "https://i.discogs.com/nLhgnGriM4r6Q9Fd_GEAsZScisobybOyyPaB-CJGrEw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNi0x/MTU4NTEwNTk4Lmpw/ZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/136",
+   "title": "Hangable Auto Bulb EP",
+   "id": 136,
+   "year": 1995,
+   "artist": "AFX*"
+  },
+  {
+   "status": "Accepted",
+   "format": "12\", EP, Mono, Ltd",
+   "catno": "WAP 67",
+   "thumb": "https://i.discogs.com/nLhgnGriM4r6Q9Fd_GEAsZScisobybOyyPaB-CJGrEw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNi0x/MTU4NTEwNTk4Lmpw/ZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/136",
+   "title": "Hangable Auto Bulb EP",
+   "id": 136,
+   "year": 1995,
+   "artist": "AFX*"
+  },
+  {
+   "status": "Accepted",
+   "format": "12\", EP",
+   "catno": "WAP 69",
+   "thumb": "https://i.discogs.com/XkzyX5TQy4TG7lXFtpNe8CRaolnAM8KXxHcW-DcOiTE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNy0x/MTYzOTQ4NTAzLmpw/ZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/137",
+   "title": "Hangable Auto Bulb EP.2",
+   "id": 137,
+   "year": 1995,
+   "artist": "AFX*"
+  },
+  {
+   "status": "Accepted",
+   "format": "12\", EP",
+   "catno": "WAP 69",
+   "thumb": "https://i.discogs.com/XkzyX5TQy4TG7lXFtpNe8CRaolnAM8KXxHcW-DcOiTE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNy0x/MTYzOTQ4NTAzLmpw/ZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/137",
+   "title": "Hangable Auto Bulb EP.2",
+   "id": 137,
+   "year": 1995,
+   "artist": "AFX*"
+  },
+  {
+   "status": "Accepted",
+   "format": "12\", Ltd",
+   "catno": "WAP 77",
+   "thumb": "https://i.discogs.com/i3s9LpfqNGzoGTlUj9VkLGXb-WwrR86Umn359PcDsG8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzOC0x/MTYzOTQ4NTY2Lmpw/ZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/138",
+   "title": "Souff Souff",
+   "id": 138,
+   "year": 1996,
+   "artist": "Woodenspoon"
+  }
+ ]
+}

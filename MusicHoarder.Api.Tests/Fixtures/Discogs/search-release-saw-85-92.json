@@ -1,0 +1,174 @@
+{
+ "pagination": {
+  "page": 1,
+  "pages": 22,
+  "per_page": 3,
+  "items": 65,
+  "urls": {
+   "last": "https://api.discogs.com/database/search?type=release&artist=Aphex+Twin&release_title=Selected+Ambient+Works+85-92&per_page=3&page=22",
+   "next": "https://api.discogs.com/database/search?type=release&artist=Aphex+Twin&release_title=Selected+Ambient+Works+85-92&per_page=3&page=2"
+  }
+ },
+ "results": [
+  {
+   "country": "Europe",
+   "genre": [
+    "Electronic"
+   ],
+   "format": [
+    "CD",
+    "Album"
+   ],
+   "style": [
+    "IDM",
+    "Techno",
+    "Ambient"
+   ],
+   "id": 2748670,
+   "label": [
+    "R & S Records",
+    "R & S Records",
+    "[PIAS] Recordings",
+    "R & S Records",
+    "R & S Records",
+    "[pias]",
+    "Optimal Media Production",
+    "Connected Music Vertrieb GmbH"
+   ],
+   "type": "release",
+   "barcode": [
+    "5 411659 169225",
+    "5411659169225",
+    "LC07800",
+    "398 PS",
+    "SABAM/BIEM",
+    "manufactured by optimal media production A040690-01",
+    "ifpi L571",
+    "IFPI 9708"
+   ],
+   "master_id": 565,
+   "master_url": "https://api.discogs.com/masters/565",
+   "uri": "/release/2748670-Aphex-Twin-Selected-Ambient-Works-85-92",
+   "catno": "AMB 3922 CD",
+   "title": "Aphex Twin - Selected Ambient Works 85-92",
+   "thumb": "https://i.discogs.com/SKUCJDeFbXiGIkFiYGL4sUxy4mSLH8sMJF9dIiPkTr8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI3NDg2/NzAtMTI5OTI3MTE3/MC5qcGVn.jpeg",
+   "cover_image": "https://i.discogs.com/0_9Faw8rq6yhbkuaHbPDUOtBwhFJxDF61-ocYCYIcEE/rs:fit/g:sm/q:90/h:603/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI3NDg2/NzAtMTI5OTI3MTE3/MC5qcGVn.jpeg",
+   "resource_url": "https://api.discogs.com/releases/2748670",
+   "format_quantity": 1,
+   "formats": [
+    {
+     "name": "CD",
+     "qty": "1",
+     "descriptions": [
+      "Album"
+     ]
+    }
+   ]
+  },
+  {
+   "country": "UK",
+   "genre": [
+    "Electronic"
+   ],
+   "format": [
+    "CD",
+    "Album",
+    "Reissue",
+    "Remastered"
+   ],
+   "style": [
+    "IDM",
+    "Techno",
+    "Electro",
+    "Experimental",
+    "Ambient"
+   ],
+   "id": 25386904,
+   "label": [
+    "Apollo",
+    "R & S Records",
+    "BMG Chrysalis",
+    "Four Manufacturing Services",
+    "Sony DADC",
+    "360 Mastering",
+    "Richardrobinsondesign.co.uk"
+   ],
+   "type": "release",
+   "barcode": [
+    "5055274703541",
+    "[Four Manufacturing Services logo] FOURMANUFACTURING.COM A0103398328-0101 12 A00",
+    "[Four Manufacturing Services logo] FOURMANUFACTURING.COM A0103398328-0101 23 A00",
+    "IFPI L556",
+    "IFPI L552",
+    "IFPI 946P",
+    "IFPI 945T",
+    "IFPI 94K2",
+    "IFPI 946Q",
+    "IFPI 94K2"
+   ],
+   "master_id": 565,
+   "master_url": "https://api.discogs.com/masters/565",
+   "uri": "/release/25386904-Aphex-Twin-Selected-Ambient-Works-85-92",
+   "catno": "AMB9322CD",
+   "title": "Aphex Twin - Selected Ambient Works 85-92",
+   "thumb": "https://i.discogs.com/MjUPjMryi0nmydXe-i3qxpaaq46sBkETjnqSuzVWbUc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1Mzg2/OTA0LTE3NTk2Nzcw/NTAtNDc2OS5qcGVn.jpeg",
+   "cover_image": "https://i.discogs.com/TZj7IuaXlxPoq1VaqVGrY0hFY5qtgNsw3DdmketR4ss/rs:fit/g:sm/q:90/h:590/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1Mzg2/OTA0LTE3NTk2Nzcw/NTAtNDc2OS5qcGVn.jpeg",
+   "resource_url": "https://api.discogs.com/releases/25386904",
+   "format_quantity": 1,
+   "formats": [
+    {
+     "name": "CD",
+     "qty": "1",
+     "descriptions": [
+      "Album",
+      "Reissue",
+      "Remastered"
+     ]
+    }
+   ]
+  },
+  {
+   "country": "Unknown",
+   "genre": [
+    "Electronic"
+   ],
+   "format": [
+    "File",
+    "MP3",
+    "Album"
+   ],
+   "style": [
+    "IDM",
+    "Techno",
+    "Ambient"
+   ],
+   "id": 5832866,
+   "label": [
+    "R & S Records",
+    "R & S Records"
+   ],
+   "type": "release",
+   "barcode": [],
+   "master_id": 565,
+   "master_url": "https://api.discogs.com/masters/565",
+   "uri": "/release/5832866-Aphex-Twin-Selected-Ambient-Works-85-92",
+   "catno": "AMB3922DB",
+   "title": "Aphex Twin - Selected Ambient Works 85-92",
+   "thumb": "https://i.discogs.com/4XytNLJ-VR4B6V3QV_kBA79zapexn6n-y4bZCE5d7f4/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MzI4/NjYtMTQwNDA0MjE5/OC0zMzM0LmpwZWc.jpeg",
+   "cover_image": "https://i.discogs.com/sp3FEnI_AgAQnii-L0YkBjACE6-_rkktHEkeY_KzI7k/rs:fit/g:sm/q:90/h:512/w:512/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MzI4/NjYtMTQwNDA0MjE5/OC0zMzM0LmpwZWc.jpeg",
+   "resource_url": "https://api.discogs.com/releases/5832866",
+   "format_quantity": 0,
+   "formats": [
+    {
+     "name": "File",
+     "qty": "13",
+     "text": "320 kbps",
+     "descriptions": [
+      "MP3",
+      "Album"
+     ]
+    }
+   ]
+  }
+ ]
+}

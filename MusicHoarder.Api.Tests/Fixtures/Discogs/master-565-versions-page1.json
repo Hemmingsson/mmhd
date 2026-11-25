@@ -1,0 +1,684 @@
+{
+ "pagination": {
+  "page": 1,
+  "pages": 22,
+  "per_page": 3,
+  "items": 65,
+  "urls": {
+   "last": "https://api.discogs.com/masters/565/versions?per_page=3&page=22",
+   "next": "https://api.discogs.com/masters/565/versions?per_page=3&page=2"
+  }
+ },
+ "filters": {
+  "applied": {},
+  "available": {
+   "format": {
+    "Album": 63,
+    "Reissue": 37,
+    "CD": 28,
+    "LP": 20,
+    "Vinyl": 20,
+    "Remastered": 15,
+    "File": 11,
+    "Unofficial Release": 11,
+    "Stereo": 7,
+    "Cassette": 5,
+    "Limited Edition": 4,
+    "Repress": 4,
+    "AAC": 3,
+    "MP3": 3,
+    "Promo": 3,
+    "WAV": 3,
+    "FLAC": 2,
+    "White Label": 2,
+    "CDr": 1,
+    "Picture Disc": 1,
+    "Test Pressing": 1
+   },
+   "label": {
+    "R & S Records": 46,
+    "Apollo": 38,
+    "Bmg Chrysalis": 8,
+    "Dadc Austria": 6,
+    "Optimal Media Production": 5,
+    "360 Mastering": 3,
+    "Chrysalis Music Ltd.": 3,
+    "Distance": 3,
+    "Mpo": 3,
+    "[Pias] America": 2,
+    "[Pias] America Classics": 2,
+    "[Pias] Recordings": 2,
+    "Alchemy Mastering": 2,
+    "Beat Records": 2,
+    "Dadc": 2,
+    "K7 Music Gmbh": 2,
+    "Sony Dadc": 2,
+    "Sony Music Entertainment (Japan) Inc.": 2,
+    "Sony Records": 2,
+    "Ten Eight Seven Mastering": 2,
+    "[Pias]": 1,
+    "Andgopink": 1,
+    "Astral Music": 1,
+    "Chrysalis": 1,
+    "Chrysalis Music": 1,
+    "Connected Music Vertrieb Gmbh": 1,
+    "Creative Vibes": 1,
+    "Fan Club": 1,
+    "Four Manufacturing Services": 1,
+    "Gz Media": 1,
+    "Mcom": 1,
+    "Memory-Tech": 1,
+    "Metropolis Mastering": 1,
+    "Music Box": 1,
+    "Not On Label (Aphex Twin)": 1,
+    "Pinnacle": 1,
+    "Power Records Ltd.": 1,
+    "Regency Recordings": 1,
+    "Richardrobinsondesign.Co.Uk": 1,
+    "Rough Trade 50": 1,
+    "Schallplattenfabrik Pallas Gmbh": 1,
+    "Sonopress Usa": 1,
+    "Sound Performance": 1,
+    "Takt": 1,
+    "Twenty Years Of Beat Records": 1
+   },
+   "country": {
+    "Belgium": 21,
+    "UK": 13,
+    "Unknown": 8,
+    "Japan": 6,
+    "France": 3,
+    "Russia": 3,
+    "Europe": 2,
+    "US": 2,
+    "Australia": 1,
+    "Czech Republic & Slovakia": 1,
+    "Germany": 1,
+    "Italy": 1,
+    "Netherlands": 1,
+    "USA & Europe": 1,
+    "Worldwide": 1
+   },
+   "released": {
+    "1992": 8,
+    "1994": 2,
+    "1999": 1,
+    "2000": 2,
+    "2002": 2,
+    "2006": 2,
+    "2008": 5,
+    "2009": 1,
+    "2011": 2,
+    "2013": 2,
+    "2014": 1,
+    "2018": 2,
+    "2021": 1,
+    "2024": 1,
+    "2025": 1,
+    "2026": 1
+   }
+  }
+ },
+ "filter_facets": [
+  {
+   "title": "Format",
+   "id": "format",
+   "values": [
+    {
+     "title": "Album",
+     "value": "Album",
+     "count": 63
+    },
+    {
+     "title": "Reissue",
+     "value": "Reissue",
+     "count": 37
+    },
+    {
+     "title": "CD",
+     "value": "CD",
+     "count": 28
+    },
+    {
+     "title": "LP",
+     "value": "LP",
+     "count": 20
+    },
+    {
+     "title": "Vinyl",
+     "value": "Vinyl",
+     "count": 20
+    },
+    {
+     "title": "Remastered",
+     "value": "Remastered",
+     "count": 15
+    },
+    {
+     "title": "File",
+     "value": "File",
+     "count": 11
+    },
+    {
+     "title": "Unofficial Release",
+     "value": "Unofficial+Release",
+     "count": 11
+    },
+    {
+     "title": "Stereo",
+     "value": "Stereo",
+     "count": 7
+    },
+    {
+     "title": "Cassette",
+     "value": "Cassette",
+     "count": 5
+    },
+    {
+     "title": "Limited Edition",
+     "value": "Limited+Edition",
+     "count": 4
+    },
+    {
+     "title": "Repress",
+     "value": "Repress",
+     "count": 4
+    },
+    {
+     "title": "AAC",
+     "value": "AAC",
+     "count": 3
+    },
+    {
+     "title": "MP3",
+     "value": "MP3",
+     "count": 3
+    },
+    {
+     "title": "Promo",
+     "value": "Promo",
+     "count": 3
+    },
+    {
+     "title": "WAV",
+     "value": "WAV",
+     "count": 3
+    },
+    {
+     "title": "FLAC",
+     "value": "FLAC",
+     "count": 2
+    },
+    {
+     "title": "White Label",
+     "value": "White+Label",
+     "count": 2
+    },
+    {
+     "title": "CDr",
+     "value": "CDr",
+     "count": 1
+    },
+    {
+     "title": "Picture Disc",
+     "value": "Picture+Disc",
+     "count": 1
+    },
+    {
+     "title": "Test Pressing",
+     "value": "Test+Pressing",
+     "count": 1
+    }
+   ],
+   "allows_multiple_values": true
+  },
+  {
+   "title": "Label",
+   "id": "label",
+   "values": [
+    {
+     "title": "R & S Records",
+     "value": "R+%26+S+Records",
+     "count": 46
+    },
+    {
+     "title": "Apollo",
+     "value": "Apollo",
+     "count": 38
+    },
+    {
+     "title": "Bmg Chrysalis",
+     "value": "Bmg+Chrysalis",
+     "count": 8
+    },
+    {
+     "title": "Dadc Austria",
+     "value": "Dadc+Austria",
+     "count": 6
+    },
+    {
+     "title": "Optimal Media Production",
+     "value": "Optimal+Media+Production",
+     "count": 5
+    },
+    {
+     "title": "360 Mastering",
+     "value": "360+Mastering",
+     "count": 3
+    },
+    {
+     "title": "Chrysalis Music Ltd.",
+     "value": "Chrysalis+Music+Ltd.",
+     "count": 3
+    },
+    {
+     "title": "Distance",
+     "value": "Distance",
+     "count": 3
+    },
+    {
+     "title": "Mpo",
+     "value": "Mpo",
+     "count": 3
+    },
+    {
+     "title": "[Pias] America",
+     "value": "%5BPias%5D+America",
+     "count": 2
+    },
+    {
+     "title": "[Pias] America Classics",
+     "value": "%5BPias%5D+America+Classics",
+     "count": 2
+    },
+    {
+     "title": "[Pias] Recordings",
+     "value": "%5BPias%5D+Recordings",
+     "count": 2
+    },
+    {
+     "title": "Alchemy Mastering",
+     "value": "Alchemy+Mastering",
+     "count": 2
+    },
+    {
+     "title": "Beat Records",
+     "value": "Beat+Records",
+     "count": 2
+    },
+    {
+     "title": "Dadc",
+     "value": "Dadc",
+     "count": 2
+    },
+    {
+     "title": "K7 Music Gmbh",
+     "value": "K7+Music+Gmbh",
+     "count": 2
+    },
+    {
+     "title": "Sony Dadc",
+     "value": "Sony+Dadc",
+     "count": 2
+    },
+    {
+     "title": "Sony Music Entertainment (Japan) Inc.",
+     "value": "Sony+Music+Entertainment+%28Japan%29+Inc.",
+     "count": 2
+    },
+    {
+     "title": "Sony Records",
+     "value": "Sony+Records",
+     "count": 2
+    },
+    {
+     "title": "Ten Eight Seven Mastering",
+     "value": "Ten+Eight+Seven+Mastering",
+     "count": 2
+    },
+    {
+     "title": "[Pias]",
+     "value": "%5BPias%5D",
+     "count": 1
+    },
+    {
+     "title": "Andgopink",
+     "value": "Andgopink",
+     "count": 1
+    },
+    {
+     "title": "Astral Music",
+     "value": "Astral+Music",
+     "count": 1
+    },
+    {
+     "title": "Chrysalis",
+     "value": "Chrysalis",
+     "count": 1
+    },
+    {
+     "title": "Chrysalis Music",
+     "value": "Chrysalis+Music",
+     "count": 1
+    },
+    {
+     "title": "Connected Music Vertrieb Gmbh",
+     "value": "Connected+Music+Vertrieb+Gmbh",
+     "count": 1
+    },
+    {
+     "title": "Creative Vibes",
+     "value": "Creative+Vibes",
+     "count": 1
+    },
+    {
+     "title": "Fan Club",
+     "value": "Fan+Club",
+     "count": 1
+    },
+    {
+     "title": "Four Manufacturing Services",
+     "value": "Four+Manufacturing+Services",
+     "count": 1
+    },
+    {
+     "title": "Gz Media",
+     "value": "Gz+Media",
+     "count": 1
+    },
+    {
+     "title": "Mcom",
+     "value": "Mcom",
+     "count": 1
+    },
+    {
+     "title": "Memory-Tech",
+     "value": "Memory-Tech",
+     "count": 1
+    },
+    {
+     "title": "Metropolis Mastering",
+     "value": "Metropolis+Mastering",
+     "count": 1
+    },
+    {
+     "title": "Music Box",
+     "value": "Music+Box",
+     "count": 1
+    },
+    {
+     "title": "Not On Label (Aphex Twin)",
+     "value": "Not+On+Label+%28Aphex+Twin%29",
+     "count": 1
+    },
+    {
+     "title": "Pinnacle",
+     "value": "Pinnacle",
+     "count": 1
+    },
+    {
+     "title": "Power Records Ltd.",
+     "value": "Power+Records+Ltd.",
+     "count": 1
+    },
+    {
+     "title": "Regency Recordings",
+     "value": "Regency+Recordings",
+     "count": 1
+    },
+    {
+     "title": "Richardrobinsondesign.Co.Uk",
+     "value": "Richardrobinsondesign.Co.Uk",
+     "count": 1
+    },
+    {
+     "title": "Rough Trade 50",
+     "value": "Rough+Trade+50",
+     "count": 1
+    },
+    {
+     "title": "Schallplattenfabrik Pallas Gmbh",
+     "value": "Schallplattenfabrik+Pallas+Gmbh",
+     "count": 1
+    },
+    {
+     "title": "Sonopress Usa",
+     "value": "Sonopress+Usa",
+     "count": 1
+    },
+    {
+     "title": "Sound Performance",
+     "value": "Sound+Performance",
+     "count": 1
+    },
+    {
+     "title": "Takt",
+     "value": "Takt",
+     "count": 1
+    },
+    {
+     "title": "Twenty Years Of Beat Records",
+     "value": "Twenty+Years+Of+Beat+Records",
+     "count": 1
+    }
+   ],
+   "allows_multiple_values": true
+  },
+  {
+   "title": "Country",
+   "id": "country",
+   "values": [
+    {
+     "title": "Belgium",
+     "value": "Belgium",
+     "count": 21
+    },
+    {
+     "title": "UK",
+     "value": "UK",
+     "count": 13
+    },
+    {
+     "title": "Unknown",
+     "value": "Unknown",
+     "count": 8
+    },
+    {
+     "title": "Japan",
+     "value": "Japan",
+     "count": 6
+    },
+    {
+     "title": "France",
+     "value": "France",
+     "count": 3
+    },
+    {
+     "title": "Russia",
+     "value": "Russia",
+     "count": 3
+    },
+    {
+     "title": "Europe",
+     "value": "Europe",
+     "count": 2
+    },
+    {
+     "title": "US",
+     "value": "US",
+     "count": 2
+    },
+    {
+     "title": "Australia",
+     "value": "Australia",
+     "count": 1
+    },
+    {
+     "title": "Czech Republic & Slovakia",
+     "value": "Czech+Republic+%26+Slovakia",
+     "count": 1
+    },
+    {
+     "title": "Germany",
+     "value": "Germany",
+     "count": 1
+    },
+    {
+     "title": "Italy",
+     "value": "Italy",
+     "count": 1
+    },
+    {
+     "title": "Netherlands",
+     "value": "Netherlands",
+     "count": 1
+    },
+    {
+     "title": "USA & Europe",
+     "value": "USA+%26+Europe",
+     "count": 1
+    },
+    {
+     "title": "Worldwide",
+     "value": "Worldwide",
+     "count": 1
+    }
+   ],
+   "allows_multiple_values": true
+  },
+  {
+   "title": "Released",
+   "id": "released",
+   "values": [
+    {
+     "title": "1992",
+     "value": "1992",
+     "count": 8
+    },
+    {
+     "title": "1994",
+     "value": "1994",
+     "count": 2
+    },
+    {
+     "title": "1999",
+     "value": "1999",
+     "count": 1
+    },
+    {
+     "title": "2000",
+     "value": "2000",
+     "count": 2
+    },
+    {
+     "title": "2002",
+     "value": "2002",
+     "count": 2
+    },
+    {
+     "title": "2006",
+     "value": "2006",
+     "count": 2
+    },
+    {
+     "title": "2008",
+     "value": "2008",
+     "count": 5
+    },
+    {
+     "title": "2009",
+     "value": "2009",
+     "count": 1
+    },
+    {
+     "title": "2011",
+     "value": "2011",
+     "count": 2
+    },
+    {
+     "title": "2013",
+     "value": "2013",
+     "count": 2
+    },
+    {
+     "title": "2014",
+     "value": "2014",
+     "count": 1
+    },
+    {
+     "title": "2018",
+     "value": "2018",
+     "count": 2
+    },
+    {
+     "title": "2021",
+     "value": "2021",
+     "count": 1
+    },
+    {
+     "title": "2024",
+     "value": "2024",
+     "count": 1
+    },
+    {
+     "title": "2025",
+     "value": "2025",
+     "count": 1
+    },
+    {
+     "title": "2026",
+     "value": "2026",
+     "count": 1
+    }
+   ],
+   "allows_multiple_values": false
+  }
+ ],
+ "versions": [
+  {
+   "id": 25663864,
+   "label": "Apollo",
+   "country": "Belgium",
+   "title": "Selected Ambient Works 85-92",
+   "major_formats": [
+    "Vinyl"
+   ],
+   "format": "LP, Album, Promo",
+   "catno": "AMB LP 3922",
+   "released": "1992",
+   "status": "Accepted",
+   "resource_url": "https://api.discogs.com/releases/25663864",
+   "thumb": "https://i.discogs.com/VdG5wjbFZ5WS8EFEeyeZOFjcyvtqjSVrLjMRxpwLVDY/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1NjYz/ODY0LTE2NzI4NTM3/MjAtNDA5My5wbmc.jpeg"
+  },
+  {
+   "id": 3694732,
+   "label": "Apollo",
+   "country": "Belgium",
+   "title": "Selected Ambient Works 85-92",
+   "major_formats": [
+    "Vinyl"
+   ],
+   "format": "LP, Album, White Label",
+   "catno": "AMB LP 3922",
+   "released": "1992",
+   "status": "Accepted",
+   "resource_url": "https://api.discogs.com/releases/3694732",
+   "thumb": "https://i.discogs.com/Pr2W6dDaK4ue9t99jlrpQwMcqphI6ygW8zSaQrUre3Y/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM2OTQ3/MzItMTcxOTc1NjIz/Mi0xOTk2LnBuZw.jpeg"
+  },
+  {
+   "id": 32662,
+   "label": "Apollo",
+   "country": "Belgium",
+   "title": "Selected Ambient Works 85-92",
+   "major_formats": [
+    "Vinyl"
+   ],
+   "format": "LP, Album",
+   "catno": "AMB LP 3922",
+   "released": "1992",
+   "status": "Accepted",
+   "resource_url": "https://api.discogs.com/releases/32662",
+   "thumb": "https://i.discogs.com/tlKfpkKQmvIY3iYK9eS017WHy2XIkwscm6RM_EDMz7U/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyNjYy/LTEyMjE4OTY5NTUu/anBlZw.jpeg"
+  }
+ ]
+}

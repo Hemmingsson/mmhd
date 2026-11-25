@@ -1,0 +1,102 @@
+{
+ "relations": [
+  {
+   "attribute-values": {},
+   "type": "allmusic",
+   "type-id": "a50a1d20-2b20-4d2c-9a29-eb771dd78386",
+   "url": {
+    "resource": "https://www.allmusic.com/album/mw0000213259",
+    "id": "8fa108cb-fd76-4fbe-a271-19836ebe2339"
+   },
+   "direction": "forward",
+   "target-credit": "",
+   "source-credit": "",
+   "end": null,
+   "ended": false,
+   "target-type": "url",
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": []
+  },
+  {
+   "target-credit": "",
+   "type-id": "99e550f3-5ab4-3110-b5b9-fe01d970b126",
+   "attribute-values": {},
+   "type": "discogs",
+   "direction": "forward",
+   "url": {
+    "resource": "https://www.discogs.com/master/565",
+    "id": "76f9925f-26b8-4545-a1e1-eb0c3436cf87"
+   },
+   "attribute-ids": {},
+   "target-type": "url",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "end": null
+  },
+  {
+   "end": null,
+   "source-credit": "",
+   "begin": null,
+   "attributes": [],
+   "target-type": "url",
+   "ended": false,
+   "attribute-ids": {},
+   "url": {
+    "resource": "https://rateyourmusic.com/release/album/aphex_twin/selected_ambient_works_85_92/",
+    "id": "90d5ebb4-974b-4d1d-9c2f-752e1c47b6e0"
+   },
+   "direction": "forward",
+   "attribute-values": {},
+   "type": "other databases",
+   "type-id": "38320e40-9f4a-3ae7-8cb2-3f3c9c5d856d",
+   "target-credit": ""
+  },
+  {
+   "target-type": "url",
+   "ended": false,
+   "attribute-ids": {},
+   "begin": null,
+   "attributes": [],
+   "source-credit": "",
+   "end": null,
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "review",
+   "type-id": "c3ac9c3b-f546-4d15-873f-b294d2c1b708",
+   "url": {
+    "resource": "http://pitchfork.com/reviews/albums/223-selected-ambient-works-85-92/",
+    "id": "fd19ea58-fe66-4b9b-8051-22a0f96fe55a"
+   },
+   "direction": "forward"
+  },
+  {
+   "attributes": [],
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "url",
+   "end": null,
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "forward",
+   "url": {
+    "id": "efe966f4-d02f-499c-9f29-a5edd33fa90c",
+    "resource": "https://www.wikidata.org/wiki/Q970352"
+   },
+   "type-id": "b988d08c-5d86-4a57-9557-c83b399e3580",
+   "type": "wikidata",
+   "attribute-values": {}
+  }
+ ],
+ "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+ "first-release-date": "1992-11-01",
+ "disambiguation": "",
+ "secondary-types": [],
+ "title": "Selected Ambient Works 85–92",
+ "secondary-type-ids": [],
+ "id": "6842c81d-ea77-3dfd-abf7-4323add3f4d4",
+ "primary-type": "Album"
+}

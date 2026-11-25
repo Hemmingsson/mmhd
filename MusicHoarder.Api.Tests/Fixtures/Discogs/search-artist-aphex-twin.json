@@ -1,0 +1,47 @@
+{
+ "pagination": {
+  "page": 1,
+  "pages": 64,
+  "per_page": 3,
+  "items": 192,
+  "urls": {
+   "last": "https://api.discogs.com/database/search?q=Aphex+Twin&type=artist&per_page=3&page=64",
+   "next": "https://api.discogs.com/database/search?q=Aphex+Twin&type=artist&per_page=3&page=2"
+  }
+ },
+ "results": [
+  {
+   "id": 45,
+   "type": "artist",
+   "master_id": null,
+   "master_url": null,
+   "uri": "/artist/45-Aphex-Twin",
+   "title": "Aphex Twin",
+   "thumb": "https://i.discogs.com/aFBxoSvd9mlMjzOXNoTW88zocqQ5JJRlz53CfIgKDGk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQ1LTE2/MjA2NzA4MTktNTg2/My5qcGVn.jpeg",
+   "cover_image": "https://i.discogs.com/g4RBichgn6RmwDxy8HOuDmLoo-ugF1BV7OSNdegfnfs/rs:fit/g:sm/q:90/h:895/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQ1LTE2/MjA2NzA4MTktNTg2/My5qcGVn.jpeg",
+   "resource_url": "https://api.discogs.com/artists/45"
+  },
+  {
+   "id": 2768892,
+   "type": "artist",
+   "master_id": null,
+   "master_url": null,
+   "uri": "/artist/2768892-Not-Aphex-Twin",
+   "title": "Not Aphex Twin",
+   "thumb": "https://i.discogs.com/5CjOX4FKVBGEjS_1xVh3NBqA2qpFmG4HRnkgV7IMydM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTI3Njg4/OTItMTMzODIyNTAw/OC00ODU1LnBuZw.jpeg",
+   "cover_image": "https://i.discogs.com/Gw9UkbAEaxqO5qWZ9LNjL-JGZqgp7Tm58k6oLHxEvJg/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTI3Njg4/OTItMTMzODIyNTAw/OC00ODU1LnBuZw.jpeg",
+   "resource_url": "https://api.discogs.com/artists/2768892"
+  },
+  {
+   "id": 8095965,
+   "type": "artist",
+   "master_id": null,
+   "master_url": null,
+   "uri": "/artist/8095965-Aphex-Twin-Diary",
+   "title": "Aphex Twin Diary",
+   "thumb": "",
+   "cover_image": "https://st.discogs.com/e6f920b18879dd9a37ac35c5719105fd9e31d44a/images/spacer.gif",
+   "resource_url": "https://api.discogs.com/artists/8095965"
+  }
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "name": "Michael Sandison",
+ "id": 430140,
+ "resource_url": "https://api.discogs.com/artists/430140",
+ "uri": "https://www.discogs.com/artist/430140-Michael-Sandison",
+ "releases_url": "https://api.discogs.com/artists/430140/releases",
+ "images": [
+  {
+   "type": "primary",
+   "uri": "https://i.discogs.com/ftB_THHQNU3AJE8PBIMFY71oUR8YmRHow-sbsrmWIEw/rs:fit/g:sm/q:90/h:500/w:495/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQzMDE0/MC0xMzQwMDIxNzE5/LTE0OTYuanBlZw.jpeg",
+   "resource_url": "https://i.discogs.com/ftB_THHQNU3AJE8PBIMFY71oUR8YmRHow-sbsrmWIEw/rs:fit/g:sm/q:90/h:500/w:495/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQzMDE0/MC0xMzQwMDIxNzE5/LTE0OTYuanBlZw.jpeg",
+   "uri150": "https://i.discogs.com/jYIMtVpcsrYisocEKGesyvAjFgzhHwHmo6DLNEEj6AU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQzMDE0/MC0xMzQwMDIxNzE5/LTE0OTYuanBlZw.jpeg",
+   "width": 495,
+   "height": 500
+  }
+ ],
+ "realname": "Michael Peter Sandison",
+ "profile": "Scottish electronic musician, born 14 July 1971 in Dundee, Scotland, UK. Brother of [a=Marcus Eoin].",
+ "urls": [
+  "http://twitter.com/#!/MikeSandison"
+ ],
+ "namevariations": [
+  "M Sandison",
+  "M. Sandison",
+  "Michael P. Sandison",
+  "Mike",
+  "Mike P. Sandison",
+  "Mike Sandison",
+  "Sandison",
+  "Sandson"
+ ],
+ "groups": [
+  {
+   "id": 307,
+   "name": "Boards Of Canada",
+   "resource_url": "https://api.discogs.com/artists/307",
+   "active": true,
+   "thumbnail_url": "https://i.discogs.com/Cc-514m5oLtK9xfKAsdoqR9SZoyLhPj6mv94mSNBcNw/rs:fit/g:sm/q:90/h:336/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTMwNy0x/Nzc5OTkyMTA0LTk5/ODkuanBlZw.jpeg"
+  },
+  {
+   "id": 3603,
+   "name": "Hell Interface",
+   "resource_url": "https://api.discogs.com/artists/3603",
+   "active": true,
+   "thumbnail_url": "https://i.discogs.com/HLsEQ3XP7cqgVi49-FFrwz0z5Mzbecqi62Gv7iAJW5c/rs:fit/g:sm/q:90/h:419/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTM2MDMt/MTUzMTY1MDQ5NC0y/NzUwLmpwZWc.jpeg"
+  }
+ ],
+ "data_quality": "Needs Vote"
+}
