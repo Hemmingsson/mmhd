@@ -5,9 +5,9 @@ using MusicHoarder.Api.Enrichment;
 
 namespace MusicHoarder.Api.Library;
 
-public sealed record DiscogsArtist(string Name);
+public sealed record DiscogsArtistForTags(string Name);
 public sealed record DiscogsFormat(string[]? Descriptions);
-public sealed record DiscogsRelease(long Id, string Title, DiscogsArtist[] Artists,
+public sealed record DiscogsReleaseForTags(long Id, string Title, DiscogsArtistForTags[] Artists,
     string[] Genres, string[] Styles, DiscogsFormat[]? Formats)
 {
     public bool Compilation => Formats?.Any(f => f.Descriptions?.Contains("Compilation", StringComparer.OrdinalIgnoreCase) == true) == true
@@ -26,16 +26,16 @@ public sealed class DiscogsGenreLookup(IMusicBrainzWebService musicBrainz, HttpC
     private DateTimeOffset nextRequest;
     private DateTimeOffset pausedUntil;
 
-    public async Task<DiscogsRelease?> FindAsync(Guid mbid, CancellationToken ct)
+    public async Task<DiscogsReleaseForTags?> FindAsync(Guid mbid, CancellationToken ct)
     {
         var key = $"discogs-release:{mbid:D}";
         await gate.WaitAsync(ct);
         try
         {
-            if (cache.TryGetValue(key, out DiscogsRelease? cached)) return cached;
+            if (cache.TryGetValue(key, out DiscogsReleaseForTags? cached)) return cached;
             if (DateTimeOffset.UtcNow < pausedUntil) return null;
             var id = await musicBrainz.DiscogsReleaseIdAsync(mbid, ct);
-            DiscogsRelease? release = null;
+            DiscogsReleaseForTags? release = null;
             if (long.TryParse(id, out var expected))
             {
                 var delay = nextRequest - DateTimeOffset.UtcNow;
@@ -49,7 +49,7 @@ public sealed class DiscogsGenreLookup(IMusicBrainzWebService musicBrainz, HttpC
                     return null;
                 }
                 response.EnsureSuccessStatusCode();
-                release = await response.Content.ReadFromJsonAsync<DiscogsRelease>(cancellationToken: ct);
+                release = await response.Content.ReadFromJsonAsync<DiscogsReleaseForTags>(cancellationToken: ct);
                 if (release?.Id != expected || release.Genres is null || release.Styles is null || release.Artists is null)
                     return null;
             }

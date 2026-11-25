@@ -491,3 +491,4 @@ $RECYCLE.BIN/
 .claude/plans/
 # playwright-cli session artifacts (page snapshots, console logs)
 .playwright-cli/
+.mmhd-local/

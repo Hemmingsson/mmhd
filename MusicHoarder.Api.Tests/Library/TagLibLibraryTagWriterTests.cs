@@ -31,7 +31,7 @@ public class TagLibLibraryTagWriterTests : IDisposable
         song.EnrichmentStatus = EnrichmentStatus.Matched;
         var mbid = Guid.NewGuid();
         song.MusicBrainzReleaseId = mbid.ToString();
-        var release = new DiscogsRelease(123, matches ? song.Album! : "Other edition",
+        var release = new DiscogsReleaseForTags(123, matches ? song.Album! : "Other edition",
             [new(song.AlbumArtist!)], ["electronic"], ["Dub Techno"], catalogCompilation ? [new(["Compilation"])] : []);
         using var cache = new MemoryCache(new MemoryCacheOptions());
         cache.Set($"discogs-release:{mbid:D}", release);

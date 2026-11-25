@@ -154,14 +154,14 @@
     <Sidebar.Header class="gap-0 px-2 pt-3 pb-2">
       <Sidebar.Menu>
         <Sidebar.MenuItem>
-          <Sidebar.MenuButton size="lg" tooltipContent="MusicHoarder">
+          <Sidebar.MenuButton size="lg" tooltipContent="Mattias Music Hoarding Disorder">
             {#snippet child({ props })}
               <a {...props} href={isFriend ? APP_HOME : '/pipeline'}>
                 <!-- The one app mark: the same disc as the favicon, the Home Screen icon and the
                      sign-in, invite and error screens. -->
                 <BrandMark class="size-[30px]" aria-hidden="true" data-mh-decor="brand" />
                 <div data-mh-brand="" class="grid min-w-0 flex-1 text-left leading-tight">
-                  <span class="truncate text-sm font-semibold">MusicHoarder</span>
+                  <span class="truncate text-sm font-semibold">MMHD</span>
                   <span class="text-muted-foreground truncate text-[11px]">
                     {version ? `v${version} · ` : ''}self-hosted
                   </span>

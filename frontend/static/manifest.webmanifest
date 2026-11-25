@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "MusicHoarder",
-  "short_name": "MusicHoarder",
+  "name": "Mattias Music Hoarding Disorder",
+  "short_name": "MMHD",
   "description": "Self-hosted music library manager that imports, fingerprints, and enriches your local music collection.",
   "lang": "en",
   "start_url": "/overview",

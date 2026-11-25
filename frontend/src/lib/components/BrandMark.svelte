@@ -23,13 +23,15 @@
   class={cn('block size-7 shrink-0', className)}
   {...rest}
 >
-  <rect width="180" height="180" rx="36" class="fill-foreground" />
-  <g transform="translate(90 90)">
-    <circle r="70" class="fill-background" />
-    <circle r="58" class="stroke-muted-foreground" stroke-width="1" opacity="0.5" />
-    <circle r="48" class="stroke-muted-foreground" stroke-width="0.75" opacity="0.35" />
-    <circle r="38" class="stroke-muted-foreground" stroke-width="0.5" opacity="0.25" />
-    <circle r="22" class="fill-foreground" />
-    <circle r="8" class="fill-background" />
-  </g>
+  <rect width="180" height="180" rx="32" class="fill-foreground"></rect><g class="fill-background"
+    ><path transform="translate(32 32)" d="M0 50V0H10L24 22L38 0H48V50H36V20L24 38L12 20V50Z"
+    ></path><path
+      transform="translate(100 32)"
+      d="M0 50V0H10L24 22L38 0H48V50H36V20L24 38L12 20V50Z"
+    ></path><path transform="translate(32 98)" d="M0 0H12V19H36V0H48V50H36V31H12V50H0Z"></path><path
+      transform="translate(100 98)"
+      fill-rule="evenodd"
+      d="M0 0H21C39 0 48 9 48 25S39 50 21 50H0ZM12 12V38H21C31 38 36 34 36 25S31 12 21 12Z"
+    ></path></g
+  >
 </svg>

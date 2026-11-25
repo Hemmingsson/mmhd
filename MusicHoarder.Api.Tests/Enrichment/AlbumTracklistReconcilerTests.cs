@@ -117,17 +117,17 @@ public class AlbumTracklistReconcilerTests
         // year wins. A Discogs listing of Deezer's album must not tip the vote, nor add its own slots.
         var voting = new[]
         {
-            Candidate(EnrichmentProvider.Deezer, "Album A", 2015, (1, 1, "A One", 200000, null)),
-            Candidate(EnrichmentProvider.SpotifyAPI, "Album B", 2012,
+            Candidate(EnrichmentProvider.Deezer, "Discovery", 2015, (1, 1, "A One", 200000, null)),
+            Candidate(EnrichmentProvider.SpotifyAPI, "Homework", 2012,
                 (1, 1, "B One", 200000, null), (1, 2, "B Two", 210000, null)),
         };
-        var discogs = Candidate(EnrichmentProvider.Discogs, "Album A", 2016,
+        var discogs = Candidate(EnrichmentProvider.Discogs, "Discovery", 2016,
             (1, 1, "A One", 200000, null), (1, 2, "Vinyl Only", 300000, null), (1, 3, "Another", 300000, null));
 
         var baseline = AlbumTracklistReconciler.Reconcile(voting);
         var withDiscogs = AlbumTracklistReconciler.Reconcile([.. voting, discogs]);
 
-        Assert.Equal("Album B", baseline!.Title);
+        Assert.Equal("Homework", baseline!.Title);
         AssertSameOutcome(baseline, withDiscogs!);
         Assert.False(withDiscogs!.Sources.Single(s => s.Provider == EnrichmentProvider.Discogs).InWinningCluster);
     }

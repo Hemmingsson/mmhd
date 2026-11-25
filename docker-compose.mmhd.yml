@@ -1,0 +1,34 @@
+services:
+  frontend:
+    platform: linux/amd64
+    pull_policy: never
+    volumes:
+      - ./.mmhd-local/frontend-build:/app/build:ro
+  api:
+    ports: !override
+      - "127.0.0.1:5050:8080"
+    platform: linux/arm64
+    image: ${MMHD_API_IMAGE:?Build and set MMHD_API_IMAGE}
+    pull_policy: never
+    environment:
+      MusicEnricher__AutoStartPipeline: "true"
+      MusicEnricher__FingerprintConcurrency: "2"
+      MusicEnricher__FingerprintBatchSize: "32"
+      MusicEnricher__EnrichmentWorkerConcurrency: "2"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "3", "http://localhost:8080/alive"]
+  spotiflac:
+    platform: linux/arm64
+    image: local/musichoarder-spotiflac:arm64
+    pull_policy: never
+  slskd:
+    image: slskd/slskd@sha256:d0963a3e5b16facd295bf4f2156dad0182f246b1b21a032cae12f5494c694843
+    pull_policy: never
+    restart: unless-stopped
+    profiles: ["slskd"]
+    networks: ["aspire"]
+    volumes:
+      - ./.mmhd-local/state/slskd-config:/app
+      - ./.mmhd-local/state/slskd-downloads:/downloads
+    environment:
+      SLSKD_DOWNLOADS_DIR: /downloads
