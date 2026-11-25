@@ -60,6 +60,8 @@ public record MusicBrainzReleaseSearchResult(
     int? TrackCount,
     int Score);
 
+public record MusicBrainzUrlRelation(string Type, string Url);
+
 public interface IMusicBrainzWebService
 {
     Task<MusicBrainzRecording?> LookupByRecordingIdAsync(string mbid, CancellationToken ct = default);
@@ -78,6 +80,18 @@ public interface IMusicBrainzWebService
     /// <summary>Searches releases by artist + album (to resolve a release id when none is stored).</summary>
     Task<IReadOnlyList<MusicBrainzReleaseSearchResult>> SearchReleasesAsync(
         string artist, string album, int limit, CancellationToken ct = default);
+
+    /// <summary>URL relationships of a MusicBrainz artist (<c>?inc=url-rels</c>). Default: empty.</summary>
+    Task<IReadOnlyList<MusicBrainzUrlRelation>> GetArtistUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<MusicBrainzUrlRelation>>([]);
+
+    /// <summary>URL relationships of a MusicBrainz release-group. Default: empty.</summary>
+    Task<IReadOnlyList<MusicBrainzUrlRelation>> GetReleaseGroupUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<MusicBrainzUrlRelation>>([]);
+
+    /// <summary>URL relationships of a MusicBrainz release. Default: empty.</summary>
+    Task<IReadOnlyList<MusicBrainzUrlRelation>> GetReleaseUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<MusicBrainzUrlRelation>>([]);
 }
 
 /// <summary>
@@ -158,6 +172,21 @@ public sealed class MusicBrainzWebService(
         var dto = await GetAsync<MusicBrainzReleaseSearchDto>(
             $"release?query={Uri.EscapeDataString(query)}&fmt=json&limit={limit}", ct);
         return MusicBrainzResponseMapper.MapReleaseSearchResults(dto?.Releases);
+    }
+
+    public Task<IReadOnlyList<MusicBrainzUrlRelation>> GetArtistUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => GetUrlRelationsAsync($"artist/{Uri.EscapeDataString(mbid)}?inc=url-rels&fmt=json", ct);
+
+    public Task<IReadOnlyList<MusicBrainzUrlRelation>> GetReleaseGroupUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => GetUrlRelationsAsync($"release-group/{Uri.EscapeDataString(mbid)}?inc=url-rels&fmt=json", ct);
+
+    public Task<IReadOnlyList<MusicBrainzUrlRelation>> GetReleaseUrlRelationsAsync(string mbid, CancellationToken ct = default)
+        => GetUrlRelationsAsync($"release/{Uri.EscapeDataString(mbid)}?inc=url-rels&fmt=json", ct);
+
+    private async Task<IReadOnlyList<MusicBrainzUrlRelation>> GetUrlRelationsAsync(string relativeUrl, CancellationToken ct)
+    {
+        var dto = await GetAsync<MusicBrainzUrlRelationsDto>(relativeUrl, ct);
+        return MusicBrainzResponseMapper.MapUrlRelations(dto?.Relations);
     }
 
     private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct) where T : class
