@@ -16,8 +16,6 @@ namespace MusicHoarder.Api.Composition;
 
 public static class DiscogsServiceCollectionExtensions
 {
-    private const string HttpClientName = "Discogs";
-
     /// <summary>
     /// The Discogs client, the catalog graph services, the supporting enrichment and tracklist
     /// providers and the backfill worker. Everything beyond reading known ids is off until its
@@ -28,20 +26,18 @@ public static class DiscogsServiceCollectionExtensions
         services.AddOptions<DiscogsOptions>().BindConfiguration(DiscogsOptions.SectionName);
 
         // One client for the process: its request gate and last rate-limit headers are the shared
-        // budget every caller draws on. The pooled-connection lifetime stands in for the factory's
-        // handler rotation, which a long-lived client never gets.
-        services.AddHttpClient(HttpClientName)
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-                AutomaticDecompression = System.Net.DecompressionMethods.All,
-            })
-            .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+        // budget every caller draws on. It owns a plain HttpClient rather than a factory one: the
+        // client paces, retries and honours 429 itself, and the factory's default resilience
+        // handler would retry around that gate. The pooled-connection lifetime keeps DNS fresh.
         services.AddSingleton<DiscogsMetrics>();
         services.AddSingleton<DiscogsClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptionsMonitor<DiscogsOptions>>();
-            var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientName);
+            var http = new HttpClient(new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+                AutomaticDecompression = System.Net.DecompressionMethods.All,
+            });
             http.Timeout = TimeSpan.FromSeconds(Math.Max(1, options.CurrentValue.TimeoutSeconds));
             return new DiscogsClient(
                 http, options, sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),

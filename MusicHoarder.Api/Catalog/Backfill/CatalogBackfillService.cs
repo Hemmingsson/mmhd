@@ -82,8 +82,12 @@ public sealed class CatalogBackfillService(
                     break;
             }
         }
-        catch (ProviderRateLimitedException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Rate limits and failures outside a single subject (an unwritable image directory, a
+            // dropped connection) pause the run; the next batch resumes from the saved cursor.
+            db.ChangeTracker.Clear();
+            run = await db.CatalogBackfillRuns.IgnoreQueryFilters().FirstAsync(r => r.Id == runId, ct);
             AddRequests(run, requestsBefore);
             run.Status = CatalogBackfillStatus.Paused;
             run.LastError = ex.Message;

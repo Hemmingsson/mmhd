@@ -99,6 +99,9 @@ services:
       - type: "volume"
         target: "/data/synced-source"
         source: "musichoarder-synced-source"
+      - type: "volume"
+        target: "/data/discogs-images"
+        source: "musichoarder-discogs-images"
       - type: "bind"
         target: "/music/source"
         source: "${MUSIC_SOURCE_PATH:-./music-source}"
@@ -192,4 +195,6 @@ volumes:
   musichoarder-downloads:
     driver: "local"
   musichoarder-synced-source:
+    driver: "local"
+  musichoarder-discogs-images:
     driver: "local"

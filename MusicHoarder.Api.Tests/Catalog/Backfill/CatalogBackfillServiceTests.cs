@@ -222,6 +222,27 @@ public class CatalogBackfillServiceTests
         Assert.Equal(2, second.RequestsUsed);
     }
 
+    [Fact]
+    public async Task RunBatch_PausesWithTheError_WhenABatchFailsOutsideASubject()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        var identity = new CatalogIdentityService(
+            db, new FakeIdentityDiscogsClient(), new FakeCatalogFetcher(), new FakeMusicBrainz(),
+            Microsoft.Extensions.Options.Options.Create(new DiscogsOptions()));
+        var sut = new CatalogBackfillService(
+            db, identity, new FakeCatalogFetcher(),
+            new FakeImages { Throw = new IOException("Read-only file system") }, new FakeIdentityDiscogsClient());
+
+        var run = await sut.StartAsync(owner, CatalogBackfillKind.Images, dryRun: false, "admin");
+        var paused = await sut.RunBatchAsync(run.Id, batchSize: 5);
+
+        Assert.Equal(nameof(CatalogBackfillStatus.Paused), paused.Status);
+        Assert.Equal("Read-only file system", paused.LastError);
+        var stored = await db.CatalogBackfillRuns.IgnoreQueryFilters().SingleAsync();
+        Assert.Equal(CatalogBackfillStatus.Paused, stored.Status);
+    }
+
     private static CatalogBackfillService CreateSut(MusicHoarderDbContext db)
     {
         var identity = new CatalogIdentityService(
@@ -263,7 +284,9 @@ public class CatalogBackfillServiceTests
 
     private sealed class FakeImages : ICatalogImageDownloader
     {
+        public Exception? Throw { get; init; }
+
         public Task<int> DownloadPendingAsync(int maxImages, CancellationToken ct = default) =>
-            Task.FromResult(0);
+            Throw is null ? Task.FromResult(0) : Task.FromException<int>(Throw);
     }
 }
