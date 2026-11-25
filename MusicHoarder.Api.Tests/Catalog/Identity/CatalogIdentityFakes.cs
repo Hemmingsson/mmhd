@@ -120,6 +120,7 @@ internal sealed class FakeIdentityDiscogsClient : IDiscogsClient
     public bool IsEnabled { get; set; } = true;
     public bool IsAuthenticated { get; set; } = true;
     public DiscogsRateLimitSnapshot? LastRateLimit { get; set; }
+    public long RequestsSent { get; set; }
 
     public List<DiscogsSearchResult> SearchResults { get; set; } = [];
     public Dictionary<long, DiscogsDocument<DiscogsRelease>> Releases { get; } = new();
@@ -145,6 +146,7 @@ internal sealed class FakeIdentityDiscogsClient : IDiscogsClient
 
     public Task<DiscogsPage<DiscogsSearchResult>> SearchAsync(DiscogsSearchQuery query, int page = 1, int perPage = 25, CancellationToken ct = default)
     {
+        RequestsSent++;
         if (ThrowOnSearch is not null)
             throw ThrowOnSearch;
         if (SearchHandler is not null)

@@ -70,6 +70,8 @@ public static class WebApplicationExtensions
         app.MapAuthEndpoints();
         app.MapWebAuthnEndpoints();
         app.MapDebugEndpoints();
+        app.MapCatalogEndpoints();
+        app.MapCatalogAdminEndpoints();
         return app;
     }
 }

@@ -57,7 +57,7 @@ public class CatalogBackfillServiceTests
         var identity = new CatalogIdentityService(
             db, new FakeIdentityDiscogsClient { IsAuthenticated = false }, new FakeCatalogFetcher(), mb,
             Microsoft.Extensions.Options.Options.Create(new DiscogsOptions { AutoAcceptConfidence = 0.9 }));
-        var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages());
+        var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), new FakeIdentityDiscogsClient());
 
         var started = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: true, "admin");
         var mid = await sut.RunBatchAsync(started.Id, batchSize: 2);
@@ -86,7 +86,7 @@ public class CatalogBackfillServiceTests
         var identity = new CatalogIdentityService(
             db, discogs, new FakeCatalogFetcher(), new FakeMusicBrainz(),
             Microsoft.Extensions.Options.Options.Create(new DiscogsOptions { AutoAcceptConfidence = 0.9 }));
-        var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages());
+        var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), new FakeIdentityDiscogsClient());
 
         var started = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
         var paused = await sut.RunBatchAsync(started.Id, batchSize: 5);
@@ -113,7 +113,7 @@ public class CatalogBackfillServiceTests
         var identity = new CatalogIdentityService(
             db, new FakeIdentityDiscogsClient { IsAuthenticated = false }, fetcher, mb,
             Microsoft.Extensions.Options.Options.Create(new DiscogsOptions { AutoAcceptConfidence = 0.9 }));
-        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages());
+        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
         await sut.RunBatchAsync(run.Id, batchSize: 10);
@@ -153,7 +153,7 @@ public class CatalogBackfillServiceTests
         var identity = new CatalogIdentityService(
             db, new FakeIdentityDiscogsClient { IsAuthenticated = false }, fetcher, mb,
             Microsoft.Extensions.Options.Options.Create(new DiscogsOptions()));
-        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages());
+        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
         await sut.RunBatchAsync(run.Id, 5);
@@ -185,7 +185,7 @@ public class CatalogBackfillServiceTests
         var identity = new CatalogIdentityService(
             db, new FakeIdentityDiscogsClient { IsAuthenticated = false }, fetcher, mb,
             Microsoft.Extensions.Options.Options.Create(new DiscogsOptions()));
-        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages());
+        var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(ownerA, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
         await sut.RunBatchAsync(run.Id, 20);
@@ -199,12 +199,35 @@ public class CatalogBackfillServiceTests
             d => Assert.Equal(ownerA, d.OwnerUserId));
     }
 
+    [Fact]
+    public async Task RunBatch_AddsTheDiscogsRequestsItSent()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Alpha", "A1", "t1");
+        AddSong(db, owner, "Beta", "B1", "t2");
+        await db.SaveChangesAsync();
+
+        var discogs = new FakeIdentityDiscogsClient { RequestsSent = 40 };
+        var identity = new CatalogIdentityService(
+            db, discogs, new FakeCatalogFetcher(), new FakeMusicBrainz(),
+            Microsoft.Extensions.Options.Options.Create(new DiscogsOptions()));
+        var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), discogs);
+
+        var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: true, "admin");
+        var first = await sut.RunBatchAsync(run.Id, batchSize: 1);
+        var second = await sut.RunBatchAsync(run.Id, batchSize: 10);
+
+        Assert.Equal(1, first.RequestsUsed);
+        Assert.Equal(2, second.RequestsUsed);
+    }
+
     private static CatalogBackfillService CreateSut(MusicHoarderDbContext db)
     {
         var identity = new CatalogIdentityService(
             db, new FakeIdentityDiscogsClient { IsAuthenticated = false }, new FakeCatalogFetcher(),
             new FakeMusicBrainz(), Microsoft.Extensions.Options.Options.Create(new DiscogsOptions()));
-        return new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages());
+        return new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), new FakeIdentityDiscogsClient());
     }
 
     private static MusicHoarderDbContext NewDb()

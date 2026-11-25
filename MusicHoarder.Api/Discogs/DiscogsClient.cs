@@ -56,6 +56,10 @@ public sealed class DiscogsClient : IDiscogsClient
 
     public DiscogsRateLimitSnapshot? LastRateLimit { get; private set; }
 
+    private long _requestsSent;
+
+    public long RequestsSent => Interlocked.Read(ref _requestsSent);
+
     public Task<DiscogsDocument<DiscogsArtist>?> GetArtistAsync(long id, CancellationToken ct = default) =>
         GetDocumentAsync<DiscogsArtist>(DiscogsResourceKind.Artist, "artists", id, "artist", ct);
 
@@ -265,6 +269,7 @@ public sealed class DiscogsClient : IDiscogsClient
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
                 ApplyHeaders(request, opts);
 
+                Interlocked.Increment(ref _requestsSent);
                 try
                 {
                     response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)

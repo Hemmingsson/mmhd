@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MusicHoarder.Api.Catalog.Identity;
+using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Enrichment;
 using MusicHoarder.Api.Persistence;
 
@@ -9,7 +10,8 @@ public sealed class CatalogBackfillService(
     MusicHoarderDbContext db,
     ICatalogIdentityService identity,
     ICatalogFetcher fetcher,
-    ICatalogImageDownloader images) : ICatalogBackfillService
+    ICatalogImageDownloader images,
+    IDiscogsClient discogs) : ICatalogBackfillService
 {
     public async Task<CatalogBackfillRunDto> StartAsync(
         Guid ownerId, CatalogBackfillKind kind, bool dryRun, string startedBy, CancellationToken ct = default)
@@ -59,6 +61,8 @@ public sealed class CatalogBackfillService(
         run.LastError = null;
         var budget = Math.Clamp(batchSize, 1, 100_000);
         var processedThisBatch = 0;
+        // The client is shared, so requests other callers send during the batch count too.
+        var requestsBefore = discogs.RequestsSent;
 
         try
         {
@@ -80,12 +84,15 @@ public sealed class CatalogBackfillService(
         }
         catch (ProviderRateLimitedException ex)
         {
+            AddRequests(run, requestsBefore);
             run.Status = CatalogBackfillStatus.Paused;
             run.LastError = ex.Message;
             run.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
             return ToDto(run);
         }
+
+        AddRequests(run, requestsBefore);
 
         // Finished when this pass found nothing, or fewer subjects than the budget (end of the list).
         if (run.Status == CatalogBackfillStatus.Running
@@ -172,7 +179,6 @@ public sealed class CatalogBackfillService(
 
         foreach (var artist in artists)
         {
-            var before = SnapshotCounters(run);
             try
             {
                 var view = await identity.ResolveArtistAsync(run.OwnerUserId, artist, run.Id, run.DryRun, ct);
@@ -198,7 +204,6 @@ public sealed class CatalogBackfillService(
             run.Cursor = DiscogsMatchScoring.ArtistSubjectKey(artist);
             run.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
-            _ = before;
         }
 
         return artists.Count;
@@ -375,8 +380,8 @@ public sealed class CatalogBackfillService(
             && CatalogKeys.TitleKey(s.Album) == albumKey);
     }
 
-    private static (int Processed, int Linked, int Candidates) SnapshotCounters(CatalogBackfillRun run) =>
-        (run.Processed, run.Linked, run.Candidates);
+    private void AddRequests(CatalogBackfillRun run, long before) =>
+        run.RequestsUsed += (int)Math.Clamp(discogs.RequestsSent - before, 0, int.MaxValue);
 
     private static string? ReadField(SongMetadata song, string fieldName) => fieldName switch
     {

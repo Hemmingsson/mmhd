@@ -424,6 +424,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAlbumTracklistProvider, MusicBrainzAlbumTracklistProvider>();
         services.AddSingleton<IAlbumTracklistProvider, SpotifyAlbumTracklistProvider>();
         services.AddSingleton<IAlbumTracklistProvider, DeezerAlbumTracklistProvider>();
+        services.AddDiscogsCatalog();
         services.AddSingleton<IAlbumTracklistProvider, AppleMusicAlbumTracklistProvider>();
         services.AddSingleton<YeTrackerTracklistCatalogService>();
         services.AddSingleton<IAlbumTracklistProvider, YeTrackerAlbumTracklistProvider>();

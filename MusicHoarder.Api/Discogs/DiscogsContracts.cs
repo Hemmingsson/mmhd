@@ -241,6 +241,9 @@ public interface IDiscogsClient
     /// <summary>The newest rate-limit headers seen, or null before the first response.</summary>
     DiscogsRateLimitSnapshot? LastRateLimit { get; }
 
+    /// <summary>HTTP requests sent since start, retries included; cache hits are not requests.</summary>
+    long RequestsSent => 0;
+
     Task<DiscogsDocument<DiscogsArtist>?> GetArtistAsync(long id, CancellationToken ct = default);
     Task<DiscogsDocument<DiscogsLabel>?> GetLabelAsync(long id, CancellationToken ct = default);
     Task<DiscogsDocument<DiscogsMaster>?> GetMasterAsync(long id, CancellationToken ct = default);
