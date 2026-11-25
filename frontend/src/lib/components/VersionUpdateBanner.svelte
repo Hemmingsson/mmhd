@@ -69,7 +69,7 @@
   >
     <span class="bg-primary size-1.5 shrink-0 rounded-full" aria-hidden="true"></span>
     <p class="min-w-0 flex-1 truncate">
-      <span class="text-foreground font-medium">MusicHoarder {info.latest} available</span>
+      <span class="text-foreground font-medium">MMHD {info.latest} available</span>
       {#if info.releaseUrl}
         <span class="mx-1 hidden sm:inline" aria-hidden="true">—</span>
         <a

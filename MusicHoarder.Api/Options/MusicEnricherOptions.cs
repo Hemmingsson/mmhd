@@ -91,7 +91,7 @@ public class MusicEnricherOptions
     public bool EnableUpdateCheck { get; set; } = true;
 
     /// <summary><c>owner/repo</c> slug polled for the latest release.</summary>
-    public string UpdateCheckRepo { get; set; } = "Jeffreyyvdb/MusicHoarder";
+    public string UpdateCheckRepo { get; set; } = "Hemmingsson/mmhd";
 
     /// <summary>
     /// How often (hours) to poll GitHub for the latest release. Long by design — the result rarely

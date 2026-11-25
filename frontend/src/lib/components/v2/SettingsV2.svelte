@@ -835,7 +835,7 @@
   }
 
   // ── updates ──────────────────────────────────────────────────────────────────
-  const UPDATE_CMD = 'docker compose pull && docker compose up -d';
+  const UPDATE_CMD = 'git pull --ff-only origin main && ./scripts/install-mmhd.sh';
   let updateCmdCopied = $state(false);
 
   async function copyUpdateCommand() {
@@ -2025,7 +2025,7 @@
   <GroupedList.Section
     headingLevel={2}
     header="Update command"
-    footer="Run this in your compose stack’s directory. It pulls the latest images and recreates the containers — your database and library are untouched."
+    footer="Run from your MMHD checkout to build and start the latest fork revision."
   >
     <div class="flex items-center gap-2 py-1 pr-2 pl-4">
       <code class="text-subheadline min-w-0 flex-1 py-2 font-mono break-words select-all md:text-xs"
@@ -2033,22 +2033,6 @@
       >
       {@render copyButton(updateCmdCopied, copyUpdateCommand, 'Copy update command')}
     </div>
-  </GroupedList.Section>
-
-  <GroupedList.Section
-    headingLevel={2}
-    header="Automatic updates"
-    footer="When a newer release is out, a banner across the app says so — this page is the reference copy of the same instructions."
-  >
-    <p class="text-subheadline px-4 py-3 md:text-sm">
-      Running <a
-        href="https://github.com/ofkm/arcane"
-        target="_blank"
-        rel="noopener noreferrer"
-        class={INLINE_LINK}>Arcane</a
-      >? Add the <code class="bg-muted rounded px-1 font-mono">arcane.stack.auto-update</code> label to
-      your compose stack to let it pull and redeploy new releases for you.
-    </p>
   </GroupedList.Section>
 {/snippet}
 

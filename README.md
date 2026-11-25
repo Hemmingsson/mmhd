@@ -7,4 +7,6 @@ Personal music library with Bandcamp purchase and wishlist sync and a Discogs ca
 - Album grouping, credit cleanup, duplicate review and reversible metadata backfills.
 - Spotify playlist imports, SpotiFLAC, Soulseek and a custom library interface.
 
+Install from this checkout with `./scripts/install-mmhd.sh`.
+
 Based on [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder).

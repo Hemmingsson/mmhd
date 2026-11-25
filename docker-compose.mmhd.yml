@@ -1,10 +1,13 @@
 services:
   frontend:
+    build: !reset null
+    image: ghcr.io/jeffreyyvdb/musichoarder/frontend:2.7.0
     platform: linux/amd64
     pull_policy: never
     volumes:
       - ${MMHD_FRONTEND_BUILD:-./.mmhd-local/frontend-build}:/app/build:ro
   api:
+    build: !reset null
     ports: !override
       - "127.0.0.1:5050:8080"
     platform: linux/arm64

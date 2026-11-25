@@ -12,7 +12,8 @@ RUN dotnet restore MusicHoarder.Api/MusicHoarder.Api.csproj
 COPY MusicHoarder.Api/ MusicHoarder.Api/
 COPY MusicHoarder.ServiceDefaults/ MusicHoarder.ServiceDefaults/
 
-RUN dotnet publish MusicHoarder.Api/MusicHoarder.Api.csproj \
+ARG MH_VERSION=2.7.0-mmhd
+RUN MH_VERSION="$MH_VERSION" dotnet publish MusicHoarder.Api/MusicHoarder.Api.csproj \
     -c Release \
     -o /app/publish \
     --no-restore

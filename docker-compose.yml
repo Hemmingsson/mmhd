@@ -17,8 +17,13 @@ services:
       - "aspire"
     restart: "always"
   api:
-    image: "ghcr.io/jeffreyyvdb/musichoarder/api:${MUSICHOARDER_VERSION:-latest}"
-    pull_policy: "always"
+    image: "local/mmhd-api:source"
+    build:
+      context: .
+      args:
+        MH_VERSION: "${MH_VERSION:-2.7.0-mmhd}"
+    platform: linux/amd64
+    pull_policy: build
     environment:
       OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
@@ -124,8 +129,10 @@ services:
       retries: 6
       start_period: "40s"
   frontend:
-    image: "ghcr.io/jeffreyyvdb/musichoarder/frontend:${MUSICHOARDER_VERSION:-latest}"
-    pull_policy: "always"
+    image: "local/mmhd-frontend:source"
+    build:
+      context: ./frontend
+    pull_policy: build
     environment:
       NODE_ENV: "production"
       PORT: "8001"
