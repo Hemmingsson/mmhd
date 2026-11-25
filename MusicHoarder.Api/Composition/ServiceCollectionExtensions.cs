@@ -282,6 +282,14 @@ public static class ServiceCollectionExtensions
         // Decodes a song to PCM for clients that cannot play the file as it is (?format=wav on the
         // stream endpoints). Stateless: one ffmpeg per requested range, nothing cached.
         services.AddSingleton<IPcmDecoder, FfmpegPcmDecoder>();
+        services.AddSingleton(sp =>
+        {
+            var client = new HttpClient { BaseAddress = new Uri("https://api.discogs.com/") };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MusicHoarder/1.0 (+https://github.com/Jeffreyyvdb/MusicHoarder)");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            return new DiscogsGenreLookup(sp.GetRequiredService<IMusicBrainzWebService>(), client,
+                sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<ILogger<DiscogsGenreLookup>>());
+        });
         services.AddScoped<ILibraryTagWriter, TagLibLibraryTagWriter>();
         services.AddScoped<ILibraryDestinationCleaner, LibraryDestinationCleaner>();
         services.AddScoped<ILibraryBuilderService, LibraryBuilderService>();

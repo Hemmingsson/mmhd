@@ -75,8 +75,8 @@ public class SpotifyApiService(
         limit = Math.Clamp(limit, 1, 50);
         offset = Math.Max(offset, 0);
 
-        var fields = "total,items(added_at,track(id,name,duration_ms,external_ids(isrc),artists(name),album(name,images)))";
-        var url = $"{BaseUrl}/playlists/{Uri.EscapeDataString(playlistId)}/tracks?offset={offset}&limit={limit}&fields={Uri.EscapeDataString(fields)}";
+        var fields = "total,items(added_at,item(id,name,duration_ms,external_ids(isrc),artists(name),album(name,images)))";
+        var url = $"{BaseUrl}/playlists/{Uri.EscapeDataString(playlistId)}/items?offset={offset}&limit={limit}&fields={Uri.EscapeDataString(fields)}";
         var json = await SendAuthenticatedRequestAsync(url, ct);
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -93,7 +93,7 @@ public class SpotifyApiService(
             return new SpotifyPlaylistLookupResult(false, null, false, "No playlist id supplied.");
 
         // Direct playlist fetch works for any accessible playlist id, unlike scanning /me/playlists.
-        var fields = "id,name,description,images,owner(display_name),tracks(total)";
+        var fields = "id,name,description,images,owner(display_name),items(total)";
         var url = $"{BaseUrl}/playlists/{Uri.EscapeDataString(playlistId)}?fields={Uri.EscapeDataString(fields)}";
 
         try
@@ -213,7 +213,8 @@ public class SpotifyApiService(
                 ? addedAtProp.GetDateTime()
                 : DateTime.MinValue;
 
-            if (!item.TryGetProperty("track", out var track) || track.ValueKind == JsonValueKind.Null)
+            if ((!item.TryGetProperty("item", out var track) && !item.TryGetProperty("track", out track))
+                || track.ValueKind != JsonValueKind.Object)
                 continue;
 
             var parsed = ParseTrackObject(track, addedAt);
@@ -297,7 +298,9 @@ public class SpotifyApiService(
         }
 
         var trackCount = 0;
-        if (item.TryGetProperty("tracks", out var tracks) && tracks.TryGetProperty("total", out var totalProp))
+        if ((item.TryGetProperty("items", out var tracks) || item.TryGetProperty("tracks", out tracks))
+            && tracks.ValueKind == JsonValueKind.Object
+            && tracks.TryGetProperty("total", out var totalProp))
             trackCount = totalProp.GetInt32();
 
         string? ownerName = null;

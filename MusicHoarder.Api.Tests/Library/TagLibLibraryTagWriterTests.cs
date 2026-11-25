@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using MusicHoarder.Api.Library;
 using MusicHoarder.Api.Persistence;
 
@@ -13,6 +15,38 @@ public class TagLibLibraryTagWriterTests : IDisposable
         Path.Combine(AppContext.BaseDirectory, "Fixtures");
 
     private readonly List<string> tempFiles = [];
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, false)]
+    public async Task DiscogsTagsRespectReleaseIdentityAndCompilationScope(
+        bool localCompilation, bool catalogCompilation, bool matches)
+    {
+        var path = CopyFixture("silence.flac");
+        var song = BasicSong();
+        song.Genre = "Electronic; Ambient";
+        song.IsCompilation = localCompilation;
+        song.EnrichmentStatus = EnrichmentStatus.Matched;
+        var mbid = Guid.NewGuid();
+        song.MusicBrainzReleaseId = mbid.ToString();
+        var release = new DiscogsRelease(123, matches ? song.Album! : "Other edition",
+            [new(song.AlbumArtist!)], ["electronic"], ["Dub Techno"], catalogCompilation ? [new(["Compilation"])] : []);
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        cache.Set($"discogs-release:{mbid:D}", release);
+        var lookup = new DiscogsGenreLookup(null!, null!, cache, NullLogger<DiscogsGenreLookup>.Instance);
+        var writer = new TagLibLibraryTagWriter(lookup);
+        await writer.WriteTagsAsync(path, song, Identity(song));
+        await writer.WriteTagsAsync(path, song, Identity(song));
+
+        using var file = TagLib.File.Create(path);
+        var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
+        Assert.Equal(matches ? new[] { "123" } : [], xiph.GetField("DISCOGS_RELEASE_ID"));
+        Assert.Equal(matches ? new[] { "Dub Techno" } : [], xiph.GetField("DISCOGS_ALBUM_STYLE"));
+        Assert.Equal(matches && !localCompilation && !catalogCompilation
+            ? new[] { "Electronic", "Ambient", "Dub Techno" } : ["Electronic", "Ambient"], file.Tag.Genres);
+    }
 
     [Fact]
     public async Task WriteTags_Mp3_ForcesId3v24()

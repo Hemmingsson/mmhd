@@ -64,6 +64,7 @@ public record MusicBrainzUrlRelation(string Type, string Url);
 
 public interface IMusicBrainzWebService
 {
+    Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct) => Task.FromResult<string?>(null);
     Task<MusicBrainzRecording?> LookupByRecordingIdAsync(string mbid, CancellationToken ct = default);
     Task<MusicBrainzRecording?> LookupByIsrcAsync(string isrc, CancellationToken ct = default);
     Task<IReadOnlyList<MusicBrainzRecording>> SearchAsync(string artist, string title, int limit, string? album = null, CancellationToken ct = default);
@@ -106,6 +107,21 @@ public sealed class MusicBrainzWebService(
     ILogger<MusicBrainzWebService> logger) : IMusicBrainzWebService
 {
     private static readonly ReconfigurableRateLimiter RateLimiter = new();
+
+    public async Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct)
+    {
+        var data = await GetAsync<System.Text.Json.Nodes.JsonObject>(
+            $"release/{release:D}?inc=url-rels&fmt=json", ct);
+        if (data?["relations"] is not System.Text.Json.Nodes.JsonArray relations) return null;
+        var ids = relations.Where(r => (string?)r?["type"] == "discogs")
+            .Select(r => (string?)r?["url"]?["resource"])
+            .Select(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && uri.Host is "www.discogs.com" or "discogs.com"
+                ? System.Text.RegularExpressions.Regex.Match(uri.AbsolutePath, @"^/release/([1-9][0-9]*)(?:-[^/]*)?/?$").Groups[1].Value
+                : null)
+            .Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
+        return ids.Length == 1 ? ids[0] : null;
+    }
 
     public async Task<MusicBrainzRecording?> LookupByRecordingIdAsync(string mbid, CancellationToken ct = default)
     {

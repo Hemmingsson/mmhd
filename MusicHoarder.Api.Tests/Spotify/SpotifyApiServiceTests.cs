@@ -232,7 +232,7 @@ public class SpotifyApiServiceTests
     }
 
     [Fact]
-    public async Task GetPlaylistTracks_ReturnsParsedTracks()
+    public async Task GetPlaylistTracks_UsesCurrentItemsEndpointAndParsesItems()
     {
         await using var db = CreateDb();
         SeedConnectedSettings(db);
@@ -245,7 +245,7 @@ public class SpotifyApiServiceTests
                 new
                 {
                     added_at = "2024-03-01T12:00:00Z",
-                    track = new
+                    item = new
                     {
                         id = "ptrack1",
                         name = "Playlist Track",
@@ -261,11 +261,12 @@ public class SpotifyApiServiceTests
             }
         };
 
-        var handler = new FakeHttpHandler(HttpStatusCode.OK, JsonSerializer.Serialize(spotifyResponse));
+        var handler = new RequestCapturingHandler(HttpStatusCode.OK, JsonSerializer.Serialize(spotifyResponse));
         var service = CreateService(db, handler);
 
         var result = await service.GetPlaylistTracksAsync("playlist123", 0, 50);
 
+        Assert.Contains("/playlists/playlist123/items?", handler.LastRequestUrl);
         Assert.Equal(1, result.Total);
         Assert.Equal(0, result.Offset);
         Assert.Equal(50, result.Limit);

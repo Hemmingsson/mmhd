@@ -92,6 +92,21 @@ public class MusicBrainzReleaseLookupTests
         Assert.Null(release);
     }
 
+    [Theory]
+    [InlineData("https://www.discogs.com/release/123-Example", "123")]
+    [InlineData("https://www.discogs.com/master/123", null)]
+    [InlineData("https://example.net/release/123", null)]
+    [InlineData("https://www.discogs.com/release/456", null)]
+    public async Task DiscogsLinkRequiresOneRelease(string url, string? expected)
+    {
+        var urls = url.EndsWith("/456") ? new[] { url, "https://www.discogs.com/release/123" } : [url];
+        var json = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            relations = urls.Select(resource => new { type = "discogs", url = new { resource } })
+        });
+        Assert.Equal(expected, await CreateService(new StubHandler(json)).DiscogsReleaseIdAsync(Guid.NewGuid(), default));
+    }
+
     private static MusicBrainzWebService CreateService(StubHandler handler)
     {
         var httpClient = new HttpClient(handler)

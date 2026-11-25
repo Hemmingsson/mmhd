@@ -30,7 +30,7 @@ public interface ILibraryTagWriter
     Task WriteTagsAsync(string path, SongMetadata song, AlbumIdentity albumIdentity, CancellationToken ct = default);
 }
 
-public class TagLibLibraryTagWriter : ILibraryTagWriter
+public class TagLibLibraryTagWriter(DiscogsGenreLookup? discogs = null) : ILibraryTagWriter
 {
     private const string VariousArtists = "Various Artists";
     private const string VariousArtistsMbid = "89ad4ac3-39f7-470e-963a-56509c546377";
@@ -48,9 +48,14 @@ public class TagLibLibraryTagWriter : ILibraryTagWriter
         TagLib.Id3v2.Tag.ForceDefaultVersion = true;
     }
 
-    public Task WriteTagsAsync(string path, SongMetadata song, AlbumIdentity albumIdentity, CancellationToken ct = default)
+    public async Task WriteTagsAsync(string path, SongMetadata song, AlbumIdentity albumIdentity, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
+
+        var release = discogs is not null && song.EnrichmentStatus == EnrichmentStatus.Matched
+            && !song.IsUnreleased && Guid.TryParse(albumIdentity.MusicBrainzReleaseId, out var mbid)
+            ? await discogs.FindAsync(mbid, ct) : null;
+        if (release is not null && !release.Matches(albumIdentity)) release = null;
 
         using var tagFile = OpenForTagging(path);
         var tag = tagFile.Tag;
@@ -96,6 +101,13 @@ public class TagLibLibraryTagWriter : ILibraryTagWriter
         // Descriptive metadata the generic Tag exposes natively (writes the correct per-format frame:
         // GENRE/TCON/©gen, COMPOSER/TCOM/©wrt, COPYRIGHT/TCOP/cprt, ARTISTSORT/TSOP/soar,
         // ALBUMARTISTSORT/TSO2/soaa). Multi-values become real repeated frames; empty clears the frame.
+        if (release is not null && !compilation && !release.Compilation)
+        {
+            song.CaptureOriginalMetadata();
+            song.Genre = MusicHoarder.Api.Metadata.MultiValue.Join(
+                MusicHoarder.Api.Metadata.MultiValue.Split(song.Genre).Concat(tag.Genres)
+                    .Concat(release.Genres).Concat(release.Styles).Distinct(StringComparer.OrdinalIgnoreCase));
+        }
         tag.Genres = MusicHoarder.Api.Metadata.MultiValue.Split(song.Genre);
         tag.Composers = MusicHoarder.Api.Metadata.MultiValue.Split(song.Composer);
         tag.Copyright = NullIfEmpty(song.Copyright);
@@ -119,8 +131,19 @@ public class TagLibLibraryTagWriter : ILibraryTagWriter
         // ID3 tag on a FLAC, which is non-spec and breaks some players.
         WriteExtendedTags(tagFile, song, albumIdentity, albumArtists, compilation);
 
+        if (release is not null)
+        {
+            void AlbumField(string name, string[] values)
+            {
+                if (tagFile.GetTag(TagLib.TagTypes.Xiph, false) is TagLib.Ogg.XiphComment xiph) SetXiph(xiph, name, values);
+                if (tagFile.GetTag(TagLib.TagTypes.Id3v2, false) is TagLib.Id3v2.Tag id3) SetId3UserText(id3, name, values);
+                if (tagFile.GetTag(TagLib.TagTypes.Apple, false) is TagLib.Mpeg4.AppleTag apple) SetDash(apple, name, values);
+            }
+            AlbumField("DISCOGS_RELEASE_ID", [release.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+            AlbumField("DISCOGS_ALBUM_GENRE", release.Genres);
+            AlbumField("DISCOGS_ALBUM_STYLE", release.Styles);
+        }
         tagFile.Save();
-        return Task.CompletedTask;
     }
 
     /// <summary>
