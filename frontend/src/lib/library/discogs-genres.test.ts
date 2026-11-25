@@ -26,6 +26,7 @@ describe('Discogs library tags', () => {
     expect(
       normalizeDiscogsGenres('Boombap / Detroit Techno; Avant-Garde, East Coast Hip Hop')
     ).toEqual(['Boom Bap', 'Techno', 'Avantgarde', 'Hip Hop']);
+    expect(normalizeDiscogsGenres('swedish house; House')).toEqual(['House']);
     expect(normalizeDiscogsGenres('Dance / Afro House / Chill Out')).toEqual([]);
   });
 });

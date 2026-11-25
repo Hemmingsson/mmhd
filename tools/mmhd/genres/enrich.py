@@ -82,7 +82,7 @@ def fetch(provider, ident):
     db.commit()
     return records
 
-songs=rows(f'''select "Id" id,"Genre" genre,"Title" title,"Artist" artist,"Album" album,"AlbumArtist" aa,"SourcePath" src,"DestinationPath" dest from "Songs" where "DeletedAtUtc" is null and "OwnerUserId"={literal(owner)} order by "Id"''')
+songs=rows(f'''select "Id" id,"Genre" genre,"Tags" tags,"Title" title,"Artist" artist,"Album" album,"AlbumArtist" aa,"SourcePath" src,"DestinationPath" dest from "Songs" where "DeletedAtUtc" is null and "OwnerUserId"={literal(owner)} order by "Id"''')
 evidence=defaultdict(list)
 for r in rows(f'''select s."Id" id,a."Provider" provider,a."MatchedDataJson"::jsonb->>'Genre' genre from "SongProviderAttempts" a join "Songs" s on s."Id"=a."SongId" where a."Status"=1 and s."OwnerUserId"={literal(owner)} and lower(trim(a."MatchedDataJson"::jsonb->>'Artist'))=lower(trim(s."Artist")) and lower(trim(a."MatchedDataJson"::jsonb->>'Title'))=lower(trim(s."Title")) and nullif(a."MatchedDataJson"::jsonb->>'Genre','') is not null'''):
     evidence[r['id']].append((str(r['provider']),r['genre'].split(';')))
@@ -104,6 +104,18 @@ for s in songs:
         for album,title,artist,genres in fetch(provider,ident):
             if (norm(album),norm(title),norm(artist))==(norm(s['album']),norm(s['title']),norm(s['artist'])):
                 credits.append((f'{provider}/{ident}',genres))
+    tags = list(s['tags'] or [])
+    tag_keys = {norm(tag) for tag in tags}
+    for source, values in credits:
+        # Destination tags are generated, and Discogs (provider 7) belongs to the taxonomy.
+        if source in ('dest', '7'):
+            continue
+        for value in values:
+            for part in re.split(r'[;|\r\n]+', value or ''):
+                tag = part.strip()
+                if tag and len(tag) <= 100 and norm(tag) not in tag_keys and not re.search(r'[\x00-\x1f]|https?://', tag):
+                    tags.append(tag)
+                    tag_keys.add(norm(tag))
     current=[x.strip() for x in (s['genre'] or '').split(';') if x.strip()]
     seen={norm(x) for x in current}
     additions={}
@@ -112,23 +124,37 @@ for s in songs:
             if not v or not v.strip() or norm(v) in seen or len(v)>100 or re.search(r'[\x00-\x1f]|https?://',v): continue
             additions[v.strip()]=source
             seen.add(norm(v))
-    if additions or current:
+    if additions or current or tags != s['tags']:
         updated='; '.join(current+list(additions))
-        changes.append((s,updated,additions))
+        changes.append((s,updated,additions,tags))
 # Normalize once per distinct value, including legacy compound fields already in the library.
 mapper = Path(__file__).resolve().parents[3] / 'scripts' / 'discogs-genre-map.ts'
-raw_values = sorted({value for _, value, _ in changes})
+raw_values = sorted({value for _, value, _, _ in changes})
 canonical = json.loads(subprocess.check_output(
     ['bun', str(mapper)], input=json.dumps(raw_values), text=True
 ))
-updated_count = 0
-for s,raw,added in changes:
-    updated = canonical[raw]
-    if updated == s['genre']:
-        continue
-    changed=sql(f'''update "Songs" set "Genre"={literal(updated)} where "Id"={int(s['id'])} and "Genre" is not distinct from {literal(s['genre'])} and "Artist" is not distinct from {literal(s['artist'])} and "Title" is not distinct from {literal(s['title'])} and "Album" is not distinct from {literal(s['album'])} and "DeletedAtUtc" is null returning "Id"''')
-    if changed:
-        updated_count += 1
-        db.execute('insert into changes values (?,?,?,?,?)',(time.time(),s['id'],s['genre'],updated,json.dumps(added)))
-        db.commit()
-print('Genre merge finished',updated_count,flush=True)
+# One conditional batch also protects additions made by the API while files were being read.
+pending = []
+for song, raw, added, tags in changes:
+    genre = canonical[raw]
+    if genre != song['genre'] or tags != song['tags']:
+        pending.append({**song, 'updated': genre, 'added': added, 'new_tags': tags})
+if pending:
+    payload = literal(json.dumps(pending, ensure_ascii=False))
+    applied = sql(f'''with incoming as (
+        select * from jsonb_to_recordset({payload}::jsonb) as x(
+            id int, genre text, updated text, tags text[], new_tags text[], artist text, title text, album text)
+    ) update "Songs" s set "Genre"=i.updated, "Tags"=i.new_tags from incoming i
+    where s."Id"=i.id and s."OwnerUserId"={literal(owner)} and s."DeletedAtUtc" is null
+        and s."Genre" is not distinct from i.genre and s."Tags"=i.tags
+        and s."Artist" is not distinct from i.artist and s."Title" is not distinct from i.title
+        and s."Album" is not distinct from i.album returning s."Id"''')
+    ids = {int(row) for row in applied.splitlines() if row.strip()}
+    db.executemany('insert into changes values (?,?,?,?,?)', [
+        (time.time(), s['id'], s['genre'], s['updated'], json.dumps(s['added']))
+        for s in pending if s['id'] in ids
+    ])
+    db.commit()
+    print('Genre and tag merge finished', len(ids), flush=True)
+else:
+    print('Genre and tag merge finished', 0, flush=True)
