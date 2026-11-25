@@ -10,6 +10,7 @@
     KIND_PLURAL,
     toggleReleaseKind
   } from '#lib/artist-discography.ts';
+  import OpenInCatalogLink from '#lib/catalog/components/OpenInCatalogLink.svelte';
   import type { ArtistPageState } from '#lib/stores/artist-page.svelte.ts';
 
   type Props = {
@@ -20,6 +21,7 @@
     onshuffle: () => void;
   };
   const { page, canPlay, onplay, onshuffle }: Props = $props();
+  const libraryArtistName = $derived(page?.artist?.trim() || null);
 
   const follow = $derived(page?.follow ?? null);
   // Follow needs a catalog artist the page trusts; until then the button waits rather than guessing.
@@ -122,6 +124,10 @@
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>
+    {/if}
+
+    {#if libraryArtistName}
+      <OpenInCatalogLink name={libraryArtistName} />
     {/if}
   {/if}
 </div>
