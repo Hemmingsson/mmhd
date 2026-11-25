@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MusicHoarder.Api.Persistence;
 
 /// <summary>What a <see cref="CatalogIdentityDecision"/> is about. Stored; append only.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CatalogIdentitySubject>))]
 public enum CatalogIdentitySubject
 {
     /// <summary>A library artist name (<c>SubjectKey</c> = its search key).</summary>
@@ -101,6 +103,7 @@ public class CatalogIdentityDecision
     public string? DecidedBy { get; set; }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter<CatalogBackfillKind>))]
 public enum CatalogBackfillKind
 {
     /// <summary>Link library albums to Discogs releases and fill the songs' Discogs ids.</summary>

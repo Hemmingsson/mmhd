@@ -3,7 +3,8 @@ using MusicHoarder.Api.Persistence;
 namespace MusicHoarder.Api.Catalog;
 
 // Wire contract of /api/catalog. frontend/src/lib/catalog/types.ts mirrors it field for field
-// (System.Text.Json web defaults: camelCase, enums as strings via the endpoint group's options).
+// (System.Text.Json web defaults: camelCase). Responses carry enums as strings; the request enums
+// (CatalogEntityKind, CatalogIdentitySubject, CatalogBackfillKind) are string-converted on the type.
 
 public sealed record CatalogPage<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
 

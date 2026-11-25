@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MusicHoarder.Api.Persistence;
 
@@ -26,6 +27,7 @@ public enum CatalogFetchState
 }
 
 /// <summary>Which kind of catalog row a polymorphic row (image, link, external id, snapshot) belongs to.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<CatalogEntityKind>))]
 public enum CatalogEntityKind
 {
     Artist = 0,
