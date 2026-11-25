@@ -1,6 +1,24 @@
 # Mattias Music Hoarding Disorder
 
-My fork of [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder), with a focus on Discogs labels, artists, and releases.
+My fork of [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder) for exploring the people, labels and editions behind my music collection.
+
+## What I’ve changed
+
+**In the local installation**
+
+- **Label browsing.** Search labels, open a label portrait, and browse its artists, albums and tracks. Album and Now Playing views link back to labels.
+- **Credits and label profiles.** Recover missing labels from embedded tags, exact MusicBrainz and Discogs releases, and UPC matches. Keep catalog numbers, release year and country, track credits and label profiles.
+- **Genres and styles.** Combine tags from files and verified editions, search styles, and see which albums and tracks carry each one.
+- **Library cleanup.** Album grouping, artist and edit-credit corrections, duplicate review, and repairs for labels credited as artists. Some of these were one-off corrections to the collection.
+- **Imports and playback services.** Import Bandcamp purchases, read Spotify playlists through the items endpoint, and run local ARM64 API and SpotiFLAC builds alongside slskd.
+- **Interface and upkeep.** MMHD branding and logo, label artwork, scheduled metadata jobs, and a watchdog that restarts the API after repeated failed health checks.
+
+**On the Discogs catalog branch**
+
+- **Artist identities.** Explore aliases, real names, name variations, group memberships and discographies. See which releases are already in the library.
+- **Labels and editions.** Browse parent labels and sublabels, masters and their versions, tracklists, artwork, credits, companies, series, formats and identifiers.
+- **Library matching.** Use Discogs alongside MusicBrainz for track metadata and album tracklists. Review candidate matches, choose an edition, resume a backfill or roll it back.
+- **Catalog tools.** Browse and filter the catalog, check availability and queue acquisitions. The Discogs client rate-limits requests, retries transient failures and caches responses and images.
 
 ## MusicHoarder features
 
