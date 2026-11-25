@@ -7,7 +7,8 @@
     ListMusic,
     ListVideo,
     Mic2,
-    Music2
+    Music2,
+    Tags
   } from '@lucide/svelte';
   import { page } from '$app/state';
   import Cover from '#lib/components/file-browser/Cover.svelte';
@@ -147,9 +148,11 @@
     icon: AudioLines,
     count: undefined as number | undefined
   };
+  const labelsRow = { href: '/labels', label: 'Labels', icon: Tags, count: undefined };
   const allLibraryRows = $derived([
     { href: '/library', label: 'Albums', icon: Disc3, count: allAlbums.length },
     { href: '/artists', label: 'Artists', icon: Mic2, count: artistGroups.length },
+    labelsRow,
     { href: '/tracks', label: 'My tracks', icon: ListMusic, count: trackListSongs.length },
     {
       href: '/tracks?f=mh-liked',
@@ -171,7 +174,9 @@
     playlistsRow,
     listeningRow
   ]);
-  const libraryRows = $derived(groupTabs ? allLibraryRows : [playlistsRow, listeningRow]);
+  const libraryRows = $derived(
+    groupTabs ? allLibraryRows : [labelsRow, playlistsRow, listeningRow]
+  );
 
   // ── playback ────────────────────────────────────────────────────────────────
   function fallbackArtist(s: ApiSong): string {

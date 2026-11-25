@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { labelHref, recordLabels } from '#lib/library/labels.ts';
   import {
     AlertCircle,
     Check,
@@ -543,7 +544,11 @@
     ...present('Composer', songDetail?.composer)
   ]);
   const releaseRows = $derived<Row[]>([
-    ...present('Label', song.label ?? album.label),
+    ...recordLabels(song.label ?? album.label).map((value) => ({
+      label: 'Label',
+      value,
+      href: labelHref(value)
+    })),
     ...present('Catalog number', songDetail?.catalogNumber ?? album.catalogNumber),
     ...present('Barcode', songDetail?.upc ?? album.upc, { copy: true }),
     ...present('Copyright', songDetail?.copyright)
@@ -595,7 +600,7 @@
 </script>
 
 {#snippet rows(list: Row[])}
-  {#each list as row (row.label)}
+  {#each list as row (row.href ?? row.label)}
     {#if row.href}
       <GroupedList.Row
         href={row.href}

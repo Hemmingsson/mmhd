@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { labelHref, recordLabels } from '#lib/library/labels.ts';
   import {
     ChevronRight,
     CircleCheck,
@@ -1390,7 +1391,12 @@
       {#if album.label}
         <div>
           <dt class="text-footnote text-muted-foreground">Label</dt>
-          <dd class="text-subheadline md:text-[13px]">{album.label}</dd>
+          <dd class="text-subheadline md:text-[13px]">
+            {#each recordLabels(album.label) as name (name)}<a
+                class="mr-2 underline"
+                href={labelHref(name)}>{name}</a
+              >{/each}
+          </dd>
         </div>
       {/if}
       {#if album.catalogNumber}

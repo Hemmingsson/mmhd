@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="T extends Tile">
   import type { Snippet } from 'svelte';
   import { Users } from '@lucide/svelte';
   import { EmptyState } from '#lib/components/ui/empty-state/index.ts';
@@ -17,10 +17,16 @@
       or two without it — so a phone hides it (desktop always shows its letter row). */
   const PHONE_INDEX_THRESHOLD = 20;
 
-  type Props = {
-    groups: GroupSummary[];
+  type Tile = Pick<
+    GroupSummary,
+    'label' | 'key' | 'trackCount' | 'albumCount' | 'coverArtist' | 'coverTitle' | 'coverUrl'
+  >;
+  type Props<T extends Tile> = {
+    entity?: 'artist' | 'label';
+    portrait?: (name: string) => string | null;
+    groups: T[];
     /** href builder for an artist (links into `/library?artist=…`). */
-    hrefFor: (group: GroupSummary) => string;
+    hrefFor: (group: T) => string;
     isLoading?: boolean;
     /**
      * What an empty list shows — the page knows why (a search miss) and what would undo it. An
@@ -34,7 +40,15 @@
      */
     indexSuppressed?: boolean;
   };
-  const { groups, hrefFor, isLoading = false, empty, indexSuppressed = false }: Props = $props();
+  const {
+    entity = 'artist',
+    portrait = getArtistImageUrl,
+    groups,
+    hrefFor,
+    isLoading = false,
+    empty,
+    indexSuppressed = false
+  }: Props<T> = $props();
 
   const isMobile = new IsMobile();
   const compact = $derived(isMobile.current);
@@ -165,7 +179,7 @@
                   <Cover
                     artist={group.coverArtist}
                     title={group.coverTitle}
-                    coverUrl={getArtistImageUrl(group.label)}
+                    coverUrl={portrait(group.label) ?? group.coverUrl}
                     fallbackUrl={group.coverUrl}
                     size={44}
                     corner={22}
@@ -192,7 +206,7 @@
       <!-- The index: fixed to the trailing edge between the nav bar and the tab bar, a 44pt-wide
            hit column. touch-none so a scrub moves the list rather than the page. -->
       <nav
-        aria-label="Artist index"
+        aria-label={entity === 'artist' ? 'Artist index' : 'Label index'}
         class="fixed top-[calc(env(safe-area-inset-top)+56px)] right-[max(0px,env(safe-area-inset-right))] bottom-(--mh-content-pad) z-10 flex w-11 touch-none flex-col items-center justify-center select-none"
         onpointerdown={onIndexDown}
         onpointermove={onIndexMove}
@@ -277,7 +291,7 @@
     <!-- A letter whose artists the search has narrowed away: say which letter, and undo it. -->
     <EmptyState
       icon={Users}
-      title={`No artists under “${letter}”`}
+      title={`No ${entity}s under “${letter}”`}
       hint="Your search leaves none that start with this letter."
       action={{ label: 'Show all letters', onclick: () => (letter = 'all') }}
     />
@@ -292,7 +306,7 @@
           <Cover
             artist={group.coverArtist}
             title={group.coverTitle}
-            coverUrl={getArtistImageUrl(group.label)}
+            coverUrl={portrait(group.label) ?? group.coverUrl}
             fallbackUrl={group.coverUrl}
             size={160}
             corner={80}
