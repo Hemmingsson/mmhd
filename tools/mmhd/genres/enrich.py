@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import subprocess
 import sys
 import time
 import urllib.error
@@ -111,12 +112,23 @@ for s in songs:
             if not v or not v.strip() or norm(v) in seen or len(v)>100 or re.search(r'[\x00-\x1f]|https?://',v): continue
             additions[v.strip()]=source
             seen.add(norm(v))
-    if additions:
+    if additions or current:
         updated='; '.join(current+list(additions))
         changes.append((s,updated,additions))
-for s,updated,added in changes:
+# Normalize once per distinct value, including legacy compound fields already in the library.
+mapper = Path(__file__).resolve().parents[3] / 'scripts' / 'discogs-genre-map.ts'
+raw_values = sorted({value for _, value, _ in changes})
+canonical = json.loads(subprocess.check_output(
+    ['bun', str(mapper)], input=json.dumps(raw_values), text=True
+))
+updated_count = 0
+for s,raw,added in changes:
+    updated = canonical[raw]
+    if updated == s['genre']:
+        continue
     changed=sql(f'''update "Songs" set "Genre"={literal(updated)} where "Id"={int(s['id'])} and "Genre" is not distinct from {literal(s['genre'])} and "Artist" is not distinct from {literal(s['artist'])} and "Title" is not distinct from {literal(s['title'])} and "Album" is not distinct from {literal(s['album'])} and "DeletedAtUtc" is null returning "Id"''')
     if changed:
+        updated_count += 1
         db.execute('insert into changes values (?,?,?,?,?)',(time.time(),s['id'],s['genre'],updated,json.dumps(added)))
         db.commit()
-print('Genre merge finished',len(changes),flush=True)
+print('Genre merge finished',updated_count,flush=True)

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { normalizeDiscogsGenres } from '#lib/library/discogs-genres.ts';
   import { labelHref, recordLabels } from '#lib/library/labels.ts';
   import {
     ChevronRight,
@@ -584,9 +585,13 @@
     const [family] = families;
     return family === 'OTHER' ? null : family;
   });
-  const genreLabel = $derived(album?.genre?.split(';')[0]?.trim() || null);
+  const genres = $derived(
+    normalizeDiscogsGenres(
+      [album?.genre, ...(album?.songs ?? []).map((song) => song.genre)].join(';')
+    )
+  );
   const heroMeta = $derived(
-    [genreLabel, album?.year != null ? String(album.year) : null, formatLabel]
+    [genres[0], album?.year != null ? String(album.year) : null, formatLabel]
       .filter(Boolean)
       .join(' · ')
   );
@@ -1384,10 +1389,19 @@
           {formatReleaseDate(album.releaseDate ?? album.year)}
         </dd>
       </div>
-      <div>
-        <dt class="text-footnote text-muted-foreground">Genre</dt>
-        <dd class="text-subheadline md:text-[13px]">{album.genre ?? '—'}</dd>
-      </div>
+      {#if genres.length}
+        <div>
+          <dt class="text-footnote text-muted-foreground">Genres &amp; styles</dt>
+          <dd class="mt-1 flex flex-wrap gap-1">
+            {#each genres as genre (genre)}
+              <a
+                class="bg-muted hover:bg-accent rounded-full px-2 py-1 text-xs"
+                href={'/genres?style=' + encodeURIComponent(genre)}>{genre}</a
+              >
+            {/each}
+          </dd>
+        </div>
+      {/if}
       {#if album.label}
         <div>
           <dt class="text-footnote text-muted-foreground">Label</dt>
