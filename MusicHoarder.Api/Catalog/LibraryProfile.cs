@@ -70,7 +70,7 @@ internal static partial class LibraryProfiles
     }
 
     internal static async Task<IResult> GetAsync(string kind, string name, MusicHoarderDbContext db,
-        ICatalogQueryService catalog, IDiscogsClient discogs, IMusicBrainzWebService musicBrainz,
+        ICatalogQueryService catalog, ICatalogIngestor ingestor, IDiscogsClient discogs, IMusicBrainzWebService musicBrainz,
         IMemoryCache cache, CancellationToken ct)
     {
         name = name.Trim();
@@ -84,7 +84,7 @@ internal static partial class LibraryProfiles
         {
             var nameKey = CatalogKeys.NameKey(name);
             var local = await db.CatalogLabels.AsNoTracking().Where(l => l.NameKey == nameKey).Take(2).ToListAsync(ct);
-            if (local.Count == 1)
+            if (local.Count == 1 && string.Equals(local[0].Name, name, StringComparison.OrdinalIgnoreCase))
             {
                 id = local[0].DiscogsId;
                 fallback = fallback with { DiscogsId = id, Profile = local[0].Profile ?? fallback.Profile,
@@ -111,8 +111,15 @@ internal static partial class LibraryProfiles
                 .OrderByDescending(s => s.FetchedAtUtc).Select(s => s.PayloadJson).FirstOrDefaultAsync(ct);
             if (kind == "label")
             {
-                var label = snapshot == null ? (await discogs.GetLabelAsync(id.Value, ct))?.Value :
-                    JsonSerializer.Deserialize<DiscogsLabel>(snapshot, DiscogsJson.Options);
+                DiscogsLabel? label;
+                if (snapshot == null)
+                {
+                    var document = await discogs.GetLabelAsync(id.Value, ct);
+                    if (document == null) return Results.Ok(fallback);
+                    await ingestor.UpsertLabelAsync(document, ct);
+                    label = document.Value;
+                }
+                else label = JsonSerializer.Deserialize<DiscogsLabel>(snapshot, DiscogsJson.Options);
                 if (label == null) return Results.Ok(fallback);
                 var country = fallback.Country ?? CountryFromProfile(label.Profile);
                 if (string.IsNullOrWhiteSpace(country))
