@@ -40,7 +40,8 @@ public record EnrichmentMatchData(
     string? AlbumArtistSort = null,
     long? DiscogsReleaseId = null,
     long? DiscogsMasterId = null,
-    long? DiscogsArtistId = null);
+    long? DiscogsArtistId = null,
+    string[]? Tags = null);
 
 /// <summary>
 /// Why this track is in the collection — did the owner ask for it, or did the app add it on their
@@ -125,6 +126,9 @@ public class SongMetadata
 
     /// <summary>Genres, ';'-joined multi-value (e.g. "Hip Hop; Rap"). See <see cref="Metadata.MultiValue"/>.</summary>
     public string? Genre { get; set; }
+
+    /// <summary>Original provider terms, preserved outside the canonical genre taxonomy.</summary>
+    public string[] Tags { get; set; } = [];
 
     /// <summary>Full release date as an ISO string (YYYY-MM-DD, or a partial "YYYY"/"YYYY-MM"); <see cref="Year"/> stays the coarse int form.</summary>
     public string? ReleaseDate { get; set; }
@@ -978,7 +982,8 @@ public class SongMetadata
         if (match.IsCompilation is not null) IsCompilation = match.IsCompilation.Value;
         if (!string.IsNullOrWhiteSpace(match.ReleaseTypePrimary)) ReleaseTypePrimary = match.ReleaseTypePrimary;
         if (!string.IsNullOrWhiteSpace(match.ReleaseTypes)) ReleaseTypes = match.ReleaseTypes;
-        if (Metadata.DiscogsGenres.Normalize(match.Genre) is { } genre) Genre = genre;
+        Tags = Metadata.ProviderTags.Combine(Tags.Concat(Metadata.ProviderTags.LegacyTerms(Genre)).Concat(Metadata.ProviderTags.FromResult(match.Genre, match.Tags, match.MatchedBy)));
+        Genre = Metadata.DiscogsGenres.Normalize(Metadata.MultiValue.Join(new[] { Genre, match.Genre }.Concat(match.Tags ?? [])));
         if (!string.IsNullOrWhiteSpace(match.ReleaseDate)) ReleaseDate = match.ReleaseDate;
         if (!string.IsNullOrWhiteSpace(match.OriginalReleaseDate)) OriginalReleaseDate = match.OriginalReleaseDate;
         if (!string.IsNullOrWhiteSpace(match.Label)) Label = match.Label;

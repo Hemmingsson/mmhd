@@ -44,7 +44,8 @@ public record EnrichmentProviderResult(
     string? AlbumArtistSort = null,
     long? DiscogsReleaseId = null,
     long? DiscogsMasterId = null,
-    long? DiscogsArtistId = null);
+    long? DiscogsArtistId = null,
+    string[]? Tags = null);
 
 public abstract record ProviderOutcome;
 public sealed record ProviderMatched(EnrichmentProviderResult Result) : ProviderOutcome;

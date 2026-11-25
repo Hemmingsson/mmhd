@@ -206,6 +206,7 @@ public class MusicHoarderDbContext : DbContext
 
         modelBuilder.Entity<SongMetadata>(entity =>
         {
+            entity.Property(e => e.Tags).HasDefaultValueSql("ARRAY[]::text[]");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.OwnerUserId, e.SourcePath }).IsUnique();
             entity.HasIndex(e => new { e.DeletedAtUtc, e.LastModifiedUtc });

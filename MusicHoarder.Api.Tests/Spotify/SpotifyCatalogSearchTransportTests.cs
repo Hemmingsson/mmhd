@@ -23,6 +23,19 @@ public class SpotifyCatalogSearchTransportTests
     private const string TrackJson =
         """{"id":"track1","name":"Song","duration_ms":1000,"artists":[{"name":"A"}],"album":{"name":"Al","release_date":"2020"}}""";
 
+    [Fact]
+    public async Task Artist_genres_are_fetched_by_id_and_cached_without_losing_original_terms()
+    {
+        var handler = new ScriptedHttpHandler();
+        handler.EnqueueToken("tok");
+        handler.EnqueueJson("""{"id":"artist","genres":["swedish house","House"]}""");
+        var service = CreateService(handler);
+        Assert.Equal(new[] { "swedish house", "House" }, await service.GetArtistGenresAsync("id", "secret", "artist"));
+        Assert.Equal(new[] { "swedish house", "House" }, await service.GetArtistGenresAsync("id", "secret", "artist"));
+        Assert.Equal(2, handler.SendCount);
+        Assert.Equal("https://api.spotify.com/v1/artists/artist", handler.Requests[1].Url);
+    }
+
     // ── token acquisition ───────────────────────────────────────────────────────────────
 
     [Fact]

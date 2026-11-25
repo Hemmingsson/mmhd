@@ -123,7 +123,8 @@ public class AppleMusicEnrichmentProvider(
             MatchWarnings: warnings,
             RecommendedStatus: status,
             Album: string.IsNullOrWhiteSpace(track.AlbumName) ? null : track.AlbumName,
-            DurationSeconds: track.DurationMs > 0 ? track.DurationMs / 1000 : null);
+            DurationSeconds: track.DurationMs > 0 ? track.DurationMs / 1000 : null,
+            Tags: track.Tags, Genre: Metadata.DiscogsGenres.Normalize(Metadata.MultiValue.Join(track.Tags)));
     }
 
     // iTunes carries no ISRC, so Apple Music omits the ISRC step (Isrc tuning left null) and otherwise

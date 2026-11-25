@@ -60,6 +60,7 @@ public static class EnrichmentProviderResultExtensions
             candidate.AlbumArtistSort,
             candidate.DiscogsReleaseId,
             candidate.DiscogsMasterId,
-            candidate.DiscogsArtistId);
+            candidate.DiscogsArtistId,
+            candidate.Tags);
     }
 }

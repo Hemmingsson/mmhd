@@ -17,6 +17,23 @@ namespace MusicHoarder.Api.Tests.Enrichment;
 public class SpotifyApiEnrichmentProviderTests
 {
     [Fact]
+    public async Task Winning_track_supplies_raw_genres_from_its_exact_artist()
+    {
+        await using var db = CreateDb();
+        var track = new SpotifyCatalogTrack("track", "Title", "Artist", "Album", 2020, 1, 200000, null, ArtistId: "exact-artist");
+        var catalog = new StubCatalogSearchService(_ => Task.FromResult<IReadOnlyList<SpotifyCatalogTrack>>([track]));
+        var provider = CreateProvider(db, catalog, spotifyOpts: Microsoft.Extensions.Options.Options.Create(
+            new SpotifyOptions { ClientId = "id", ClientSecret = "secret" }));
+        var song = new SongMetadata { SourcePath = "/song.flac", FileName = "song.flac", Extension = ".flac",
+            FileSizeBytes = 1, LastModifiedUtc = DateTime.UtcNow, IndexedAtUtc = DateTime.UtcNow,
+            Artist = "Artist", Title = "Title", DurationSeconds = 200 };
+        var matched = Assert.IsType<ProviderMatched>(await provider.TryEnrichAsync(song));
+        Assert.Equal("exact-artist", catalog.GenresArtistId);
+        Assert.Equal(new[] { "swedish house", "House" }, matched.Result.Tags);
+        Assert.Equal("House", matched.Result.Genre);
+    }
+
+    [Fact]
     public async Task TryEnrichAsync_WithCredentialsFromSpotifyOptions_WhenDbEmpty_CallsCatalogSearch()
     {
         await using var db = CreateDb();
@@ -559,6 +576,12 @@ public class SpotifyApiEnrichmentProviderTests
         Func<string, Task<IReadOnlyList<SpotifyCatalogTrack>>> handler) : ISpotifyCatalogSearchService
     {
         public int CallCount { get; private set; }
+        public string? GenresArtistId { get; private set; }
+        public Task<string[]> GetArtistGenresAsync(string clientId, string clientSecret, string artistId, CancellationToken ct = default)
+        {
+            GenresArtistId = artistId;
+            return Task.FromResult(new[] { "swedish house", "House" });
+        }
 
         public Task<IReadOnlyList<SpotifyCatalogTrack>> SearchTracksAsync(
             string clientId,

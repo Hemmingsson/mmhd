@@ -93,8 +93,8 @@ public static partial class ConsensusEvaluator
         // weaker (non-Matched) verdict keeps waiting, but only while the rate-limit is still within
         // the deferral window; past it we finalize on whatever answered so a persistently throttled
         // provider can't stall enrichment forever.
-        if (verdict.Status == EnrichmentStatus.Matched)
-            return verdict;
+        if (verdict.Status == EnrichmentStatus.Matched && verdict.Winner is not null)
+            return verdict with { Winner = Metadata.ProviderTags.WithEvidence(verdict.Winner, song.ProviderAttempts, verdict.AgreeingProviders) };
 
         var hasFreshRateLimit = song.ProviderAttempts.Any(a =>
             voting.Contains(a.Provider)

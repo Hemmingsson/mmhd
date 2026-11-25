@@ -110,6 +110,18 @@ public sealed class SpotifyCatalogSearchService(
         return json is null ? null : SpotifyCatalogJson.ParseFirstTrackId(json);
     }
 
+    public async Task<string[]> GetArtistGenresAsync(string clientId, string clientSecret, string artistId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(artistId)) return [];
+        var key = $"spotify_artist_genres:{artistId}";
+        if (cache.TryGetValue(key, out string[]? cached) && cached is not null) return cached;
+        var json = await api.GetJsonAsync(clientId, clientSecret, $"https://api.spotify.com/v1/artists/{Uri.EscapeDataString(artistId)}", ct);
+        if (json is null) return [];
+        var genres = SpotifyCatalogJson.ParseArtistGenres(json);
+        cache.Set(key, genres, TimeSpan.FromHours(24));
+        return genres;
+    }
+
     private static string BuildSearchCacheKey(string query, int limit, string? market)
     {
         var raw = $"{limit}|{market ?? ""}|{query}";

@@ -353,6 +353,8 @@ public sealed class AppleMusicCatalogService(
         if (track.TryGetProperty("releaseDate", out var rd) && rd.ValueKind == JsonValueKind.String)
             releaseYear = ReleaseDateParser.ParseYear(rd.GetString());
 
-        return new AppleMusicCatalogTrack(id, title, artist, albumName, releaseYear, trackNumber, durationMs, null);
+        var genres = track.TryGetProperty("primaryGenreName", out var genre) && genre.ValueKind == JsonValueKind.String
+            ? ProviderTags.Combine([genre.GetString()]) : [];
+        return new AppleMusicCatalogTrack(id, title, artist, albumName, releaseYear, trackNumber, durationMs, null, genres);
     }
 }

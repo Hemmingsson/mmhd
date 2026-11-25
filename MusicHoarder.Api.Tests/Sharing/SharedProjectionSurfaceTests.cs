@@ -20,7 +20,7 @@ public class SharedProjectionSurfaceTests
         "Id", "SourcePath", "FileName", "Extension", "FileSizeBytes",
         "Artist", "Artists", "AlbumArtist", "Album", "Title",
         "Year", "TrackNumber", "DiscNumber", "DurationSeconds", "DurationMs", "Bitrate",
-        "Genre", "ReleaseDate", "OriginalReleaseDate", "Label",
+        "Genre", "Tags", "ReleaseDate", "OriginalReleaseDate", "Label",
         "MusicBrainzId", "MusicBrainzReleaseId", "Isrc", "SpotifyId",
         "HasCoverArt", "HasSyncedLyrics", "HasPlainLyrics", "IsInstrumental", "HasMusicVideo",
         "AcquiredAtUtc",

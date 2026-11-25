@@ -12,7 +12,8 @@ public record AppleMusicCatalogTrack(
     int? ReleaseYear,
     int? TrackNumber,
     int DurationMs,
-    string? Isrc);
+    string? Isrc,
+    string[]? Tags = null);
 
 /// <summary>An album search hit (<c>entity=album</c>) carrying enough identity to verify the match.</summary>
 public record AppleAlbumCandidate(string CollectionId, string? CollectionName, string? ArtistName);

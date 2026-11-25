@@ -2,6 +2,7 @@ namespace MusicHoarder.Api.Spotify;
 
 public interface ISpotifyCatalogSearchService
 {
+    Task<string[]> GetArtistGenresAsync(string clientId, string clientSecret, string artistId, CancellationToken ct = default) => Task.FromResult(Array.Empty<string>());
     /// <summary>
     /// Search tracks using client-credentials (app token cached in memory only).
     /// </summary>

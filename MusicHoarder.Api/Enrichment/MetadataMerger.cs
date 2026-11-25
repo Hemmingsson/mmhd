@@ -63,12 +63,8 @@ public static class MetadataMerger
         var highConsensus = agreeingProviderCount >= 2 && confidence >= autoUpgradeConfidence;
         var changes = new List<FieldChange>();
 
-        // A supporting provider's field fills a gap but never replaces a good value on its own say;
-        // the one exception is a genre that is exactly the incoming styles plus Discogs broad genres.
+        // A supporting provider's release fields fill gaps but never replace curated values.
         bool Supporting(string field) => supportingFields?.Contains(field) == true;
-        var genreUpgrade = Supporting("Genre")
-            ? FieldAuthority.IsStylesOfStoredGenre(song.Genre, winner.Genre)
-            : highConsensus;
 
         // Recording/identity fields: the agreeing cluster already corroborated these, so the blanket
         // consensus flag governs whether they may upgrade a good curated value.
@@ -100,9 +96,15 @@ public static class MetadataMerger
         // Descriptive metadata. These are enrichment-sourced (the row starts null), so the initial
         // fill always applies; the gating below only decides rare re-enrichment conflicts. Album-level
         // descriptive fields (label/catalog/upc/copyright/album-artist-sort) are gated on the same
-        // per-field corroboration as the other album-level fields; genre/composer/artist-sort are
-        // recording-level and gated on the blanket consensus flag.
-        MergeText(song, "Genre", song.Genre, DiscogsGenres.Normalize(winner.Genre), v => song.Genre = v, genreUpgrade, changes);
+        // per-field corroboration as the other album-level fields. Genres accumulate canonical
+        // terms; original provider vocabulary remains independently available in Tags.
+        song.Tags = ProviderTags.Combine(song.Tags.Concat(ProviderTags.LegacyTerms(song.Genre)).Concat(ProviderTags.FromResult(winner.Genre, winner.Tags, winner.MatchedBy)));
+        var genre = DiscogsGenres.Normalize(MultiValue.Join(new[] { song.Genre, winner.Genre }.Concat(winner.Tags ?? [])));
+        if (genre != song.Genre)
+        {
+            changes.Add(new FieldChange("Genre", song.Genre, genre, Applied: true));
+            song.Genre = genre;
+        }
         MergeText(song, "Composer", song.Composer, winner.Composer, v => song.Composer = v, highConsensus, changes);
         MergeText(song, "ArtistSort", song.ArtistSort, winner.ArtistSort, v => song.ArtistSort = v, highConsensus, changes);
         MergeText(song, "Label", song.Label, winner.Label, v => song.Label = v, Upgrade("Label"), changes);

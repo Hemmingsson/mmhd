@@ -39,7 +39,7 @@ public class SongsListContractTests
         "AcquiredAtUtc", "DeletedAtUtc",
         // What a row shows, groups and sorts by.
         "Artist", "Artists", "AlbumArtist", "Album", "Title", "Year", "TrackNumber",
-        "DurationSeconds", "DurationMs", "Bitrate", "Genre", "ReleaseDate", "Label",
+        "DurationSeconds", "DurationMs", "Bitrate", "Genre", "Tags", "ReleaseDate", "Label",
         // The cover and video affordances on a row.
         "HasCoverArt", "HasMusicVideo",
         // Catalog ids: duplicate detection, Spotify matching on the Add pages, album grouping.
@@ -76,6 +76,23 @@ public class SongsListContractTests
         var actual = row.GetType().GetProperties().Select(p => p.Name).Order(StringComparer.Ordinal);
 
         Assert.Equal(OwnRowKeys.Order(StringComparer.Ordinal), actual);
+    }
+
+    [Fact]
+    public async Task Library_and_detail_publish_original_provider_tags_as_arrays()
+    {
+        await using var db = NewContext();
+        var song = NewSong("/tagged.flac");
+        song.Genre = "House";
+        song.Tags = [" swedish house ", "swedish house", "House"];
+        db.Songs.Add(song);
+        await db.SaveChangesAsync();
+        using var library = JsonDocument.Parse(await Written(await ListSongsCaller.Invoke(db)));
+        Assert.Equal(new[] { "swedish house", "House" }, library.RootElement.GetProperty("songs")[0]
+            .GetProperty("tags").EnumerateArray().Select(t => t.GetString()));
+        using var detail = JsonDocument.Parse(await Written(await SongsEndpoints.GetEnrichmentDetail(song.Id, db)));
+        Assert.Equal(new[] { "swedish house", "House" }, detail.RootElement.GetProperty("tags")
+            .EnumerateArray().Select(t => t.GetString()));
     }
 
     [Theory]
@@ -135,6 +152,7 @@ public class SongsListContractTests
         // Non-null values are still written, false and zero included.
         Assert.Equal(0, row.GetProperty("playCount").GetInt32());
         Assert.False(row.GetProperty("isBuilt").GetBoolean());
+        Assert.Empty(row.GetProperty("tags").EnumerateArray());
         // The review queue's original tags are absent, not null, on the library list.
         Assert.False(body.RootElement.TryGetProperty("originalTags", out _));
     }

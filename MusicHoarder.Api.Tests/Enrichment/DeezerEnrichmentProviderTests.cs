@@ -263,6 +263,20 @@ public class DeezerEnrichmentProviderTests
         Assert.Equal(TimeSpan.FromSeconds(30), rateLimited.RetryAfter);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Winning_track_supplies_raw_genres_from_its_album(bool isrcLookup)
+    {
+        var track = new DeezerCatalogTrack("track", "Title", "Artist", "Album", 2020, 1, 200000, "ISRC", AlbumId: "album");
+        var catalog = new StubDeezerCatalog {
+            OnIsrc = _ => isrcLookup ? track : null, OnSearch = _ => [track],
+            OnAlbum = id => new DeezerAlbumDetail(id, "Album", "Artist", 2020, null, [], ["Dance", "swedish house"]) };
+        var provider = CreateProvider(catalog);
+        var matched = Assert.IsType<ProviderMatched>(await provider.TryEnrichAsync(Song("Artist", "Title", 200, "ISRC")));
+        Assert.Equal(new[] { "Dance", "swedish house" }, matched.Result.Tags);
+    }
+
     private static DeezerEnrichmentProvider CreateProvider(
         IDeezerCatalogService catalog, IOptions<MusicEnricherOptions>? opts = null)
     {
@@ -296,6 +310,7 @@ public class DeezerEnrichmentProviderTests
         public Func<string, DeezerCatalogTrack?>? OnIsrc { get; init; }
         public Func<string, IReadOnlyList<DeezerCatalogTrack>>? OnSearch { get; init; }
         public Func<string, DeezerCatalogTrack?>? OnLookupId { get; init; }
+        public Func<string, DeezerAlbumDetail?>? OnAlbum { get; init; }
 
         public int IsrcCalls { get; private set; }
         public int SearchCalls { get; private set; }
@@ -329,7 +344,7 @@ public class DeezerEnrichmentProviderTests
             => Task.FromResult<IReadOnlyList<DeezerArtistCandidate>>([]);
 
         public Task<DeezerAlbumDetail?> GetAlbumAsync(string albumId, CancellationToken ct = default)
-            => Task.FromResult<DeezerAlbumDetail?>(null);
+            => Task.FromResult(OnAlbum?.Invoke(albumId));
 
         public Task<DeezerPlaylistSummary?> GetPlaylistAsync(string id, CancellationToken ct = default)
             => Task.FromResult<DeezerPlaylistSummary?>(null);

@@ -39,6 +39,7 @@ internal static class SongColumnFill
     {
         var type = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
         if (type == typeof(string)) return $"{property.Name} {seed}";
+        if (type == typeof(string[])) return new[] { $"{property.Name} {seed}" };
         if (type == typeof(bool)) return true;
         if (type == typeof(int)) return 1000 + seed;
         if (type == typeof(long)) return 1000L + seed;

@@ -346,6 +346,7 @@ public static class SongsEndpoints
                 s.AcoustIdTrackId,
                 s.LrclibId,
                 s.Genre,
+                s.Tags,
                 s.ReleaseDate,
                 s.Label,
                 s.EnrichmentStatus,
@@ -429,7 +430,7 @@ public static class SongsEndpoints
             s.HasCoverArt,
             s.HasFingerprint,
                 s.Isrc, s.MusicBrainzId, s.MusicBrainzReleaseId, s.SpotifyId, s.AcoustIdTrackId, s.LrclibId,
-            Genre = Metadata.DiscogsGenres.Normalize(s.Genre), s.ReleaseDate, s.Label,
+            Genre = Metadata.DiscogsGenres.Normalize(s.Genre), Tags = Metadata.ProviderTags.Combine(s.Tags), s.ReleaseDate, s.Label,
             s.EnrichmentStatus, s.MatchedBy, s.MatchConfidence,
             MatchWarnings = matchWarnings,
             // Released vs unreleased (leak/snippet/stem), derived from the tracker category the
@@ -1652,6 +1653,8 @@ public static class SongsEndpoints
             // pipeline timeline's first and last stamps, and Now Playing's Details rows.
             indexedAtUtc = song.IndexedAtUtc,
             libraryBuiltAtUtc = song.LibraryBuiltAtUtc,
+            tags = Metadata.ProviderTags.Combine(song.Tags),
+            genre = Metadata.DiscogsGenres.Normalize(song.Genre),
             composer = song.Composer,
             copyright = song.Copyright,
             catalogNumber = song.CatalogNumber,

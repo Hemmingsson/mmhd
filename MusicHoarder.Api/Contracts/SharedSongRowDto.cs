@@ -55,6 +55,7 @@ public sealed record SharedSongRowDto
     public int? Bitrate { get; init; }
 
     public string? Genre { get; init; }
+    public string[] Tags { get; init; } = [];
     public string? ReleaseDate { get; init; }
     public string? OriginalReleaseDate { get; init; }
     public string? Label { get; init; }
@@ -122,6 +123,7 @@ public sealed record SharedSongRowDto
             DurationMs = song.DurationMs,
             Bitrate = song.Bitrate,
             Genre = Metadata.DiscogsGenres.Normalize(song.Genre),
+            Tags = Metadata.ProviderTags.Combine(song.Tags),
             ReleaseDate = song.ReleaseDate,
             OriginalReleaseDate = song.OriginalReleaseDate,
             Label = song.Label,

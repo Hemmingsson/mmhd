@@ -52,6 +52,7 @@ public static class FieldAuthority
             CatalogNumber = catalogNumber,
             Upc = upc,
             Genre = genre,
+            Tags = Metadata.ProviderTags.FromResult(winner.Genre, winner.Tags, winner.MatchedBy),
             DiscogsReleaseId = discogs.DiscogsReleaseId ?? winner.DiscogsReleaseId,
             DiscogsMasterId = discogs.DiscogsMasterId ?? winner.DiscogsMasterId,
             DiscogsArtistId = discogs.DiscogsArtistId ?? winner.DiscogsArtistId,

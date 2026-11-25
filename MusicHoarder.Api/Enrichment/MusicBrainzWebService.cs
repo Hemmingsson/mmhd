@@ -35,7 +35,8 @@ public record MusicBrainzRecording(
     string? CatalogNumber = null,
     string? Barcode = null,
     string? ArtistSort = null,
-    string? AlbumArtistSort = null);
+    string? AlbumArtistSort = null,
+    string[]? Tags = null);
 
 /// <summary>The full canonical tracklist of a single MusicBrainz release (all discs/media flattened).</summary>
 public record MusicBrainzRelease(

@@ -87,7 +87,8 @@ public class DiscogsConsensusTests
         Assert.Equal("Apollo", r.Winner!.Label);
         Assert.Equal("AMB 3922 CD", r.Winner.CatalogNumber);
         Assert.Equal("111111111111", r.Winner.Upc); // a streaming UPC names the file's edition: kept
-        Assert.Equal("Techno; IDM; Ambient; Experimental", r.Winner.Genre);
+        Assert.Equal("Techno; IDM; Ambient; Experimental; Electronic", r.Winner.Genre);
+        Assert.Equal(new[] { "electronic" }, r.Winner.Tags);
         Assert.Equal(1545313, r.Winner.DiscogsReleaseId);
         Assert.Equal(565, r.Winner.DiscogsMasterId);
         Assert.Equal(45, r.Winner.DiscogsArtistId);

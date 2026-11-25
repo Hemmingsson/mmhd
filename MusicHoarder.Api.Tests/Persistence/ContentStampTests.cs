@@ -72,6 +72,15 @@ public class ContentStampTests
     }
 
     [Fact]
+    public void StringArrays_AreStampedByContentsAndBoundaries()
+    {
+        Assert.Equal(Stamp(s => s.Add(new[] { "swedish house", "House" })),
+            Stamp(s => s.Add(new[] { "swedish house", "House" })));
+        Assert.NotEqual(Stamp(s => s.Add(new[] { "a", "bc" })), Stamp(s => s.Add(new[] { "ab", "c" })));
+        Assert.NotEqual(Stamp(s => s.Add((string[]?)null)), Stamp(s => s.Add(Array.Empty<string>())));
+    }
+
+    [Fact]
     public void Finish_StartsOver()
     {
         using var stamp = new ContentStamp();

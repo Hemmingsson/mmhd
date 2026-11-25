@@ -132,7 +132,7 @@ internal static class DeezerCatalogJson
         }
 
         return new DeezerCatalogTrack(id, title, artist, albumName, releaseYear, trackNumber, durationSec * 1000, isrc,
-            Artists: artists);
+            Artists: artists, AlbumId: track.TryGetProperty("album", out var albumObject) && albumObject.ValueKind == JsonValueKind.Object ? ReadIdAsString(albumObject) : null);
     }
 
     /// <summary>
@@ -268,7 +268,10 @@ internal static class DeezerCatalogJson
                 }
             }
 
-            return new DeezerAlbumDetail(id, title, artist, year, cover, tracks);
+            var genres = root.TryGetProperty("genres", out var genreObject) && genreObject.ValueKind == JsonValueKind.Object
+                && genreObject.TryGetProperty("data", out var genreData) && genreData.ValueKind == JsonValueKind.Array
+                ? ProviderTags.Combine(genreData.EnumerateArray().Where(g => g.ValueKind == JsonValueKind.Object).Select(g => ReadString(g, "name"))) : [];
+            return new DeezerAlbumDetail(id, title, artist, year, cover, tracks, genres);
         }
         catch (JsonException)
         {

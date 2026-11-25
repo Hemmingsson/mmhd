@@ -47,7 +47,7 @@ public class DeezerEnrichmentProvider(
                 {
                     logger.LogDebug("Deezer ISRC lookup hit for SongId={SongId} ({Isrc})", song.Id, fileIsrc);
                     var (isrcScore, isrcWarnings) = ScoreCandidate(song, resolved, isrcTrack, opts);
-                    return Finalize(song, isrcTrack, isrcScore, isrcWarnings, opts);
+                    return Finalize(song, await WithAlbumGenresAsync(isrcTrack, ct), isrcScore, isrcWarnings, opts);
                 }
             }
 
@@ -85,7 +85,22 @@ public class DeezerEnrichmentProvider(
 
         // Re-score against the hydrated track so an ISRC match can boost confidence.
         var (finalScore, finalWarnings) = ScoreCandidate(song, resolved, bestTrack, opts);
-        return Finalize(song, bestTrack, finalScore, finalWarnings, opts);
+        return Finalize(song, await WithAlbumGenresAsync(bestTrack, ct), finalScore, finalWarnings, opts);
+    }
+
+    private async Task<DeezerCatalogTrack> WithAlbumGenresAsync(DeezerCatalogTrack track, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(track.AlbumId)) return track;
+        try
+        {
+            var album = await catalog.GetAlbumAsync(track.AlbumId, ct);
+            return track with { Tags = album?.Genres };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(ex, "Deezer album genres unavailable for {AlbumId}", track.AlbumId);
+            return track;
+        }
     }
 
     private ProviderOutcome Finalize(
@@ -122,7 +137,8 @@ public class DeezerEnrichmentProvider(
             RecommendedStatus: status,
             Album: string.IsNullOrWhiteSpace(track.AlbumName) ? null : track.AlbumName,
             Artists: track.Artists,
-            DurationSeconds: track.DurationMs > 0 ? track.DurationMs / 1000 : null);
+            DurationSeconds: track.DurationMs > 0 ? track.DurationMs / 1000 : null,
+            Tags: track.Tags, Genre: Metadata.DiscogsGenres.Normalize(Metadata.MultiValue.Join(track.Tags)));
     }
 
     // Deezer's tuned values mirror Spotify's; only the threshold knobs differ. The shared scorer

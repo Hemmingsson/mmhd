@@ -37,6 +37,13 @@ public sealed class ContentStamp : IDisposable
 
     public void Add(Guid value) => value.TryWriteBytes(Reserve(16));
 
+    public void Add(string[]? values)
+    {
+        Add(values?.Length ?? -1);
+        if (values is null) return;
+        foreach (var value in values) Add(value);
+    }
+
     public void Add(string? value)
     {
         if (value is null)

@@ -39,26 +39,27 @@ public class DiscogsMergeTests
     }
 
     [Fact]
-    public void StoredGenresPlusStyles_GiveWayToStyles()
+    public void StoredGenresAndIncomingStyles_AreCombined()
     {
         var song = Song();
         song.Genre = "Electronic; Techno; IDM; Ambient";
 
         MetadataMerger.ApplyMatch(song, Winner(), 0.95, 1, 0.9, null, null, Supporting);
 
-        Assert.Equal("Techno; IDM; Ambient", song.Genre);
+        Assert.Equal("Electronic; Techno; IDM; Ambient", song.Genre);
     }
 
     [Fact]
-    public void ACustomGenre_IsOnlyProposed()
+    public void ACustomLegacyGenre_IsPreservedAsATagWhileCanonicalStylesAreApplied()
     {
         var song = Song();
         song.Genre = "Late Night Listening";
 
         var changes = MetadataMerger.ApplyMatch(song, Winner(), 0.99, 3, 0.9, null, null, Supporting);
 
-        Assert.Equal("Late Night Listening", song.Genre);
-        Assert.False(Assert.Single(changes, c => c.Field == "Genre").Applied);
+        Assert.Equal("Techno; IDM; Ambient", song.Genre);
+        Assert.Contains("Late Night Listening", song.Tags);
+        Assert.True(Assert.Single(changes, c => c.Field == "Genre").Applied);
     }
 
     [Fact]

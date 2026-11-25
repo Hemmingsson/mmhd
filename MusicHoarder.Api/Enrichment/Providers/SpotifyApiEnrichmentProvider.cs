@@ -100,11 +100,24 @@ public class SpotifyApiEnrichmentProvider(
         // succeeded, and these fields are optional extras.
         var album = await TryGetAlbumDetailAsync(clientId, clientSecret, best.Candidate.AlbumId, ct);
 
+        var tags = await TryGetArtistGenresAsync(clientId, clientSecret, best.Candidate.ArtistId, ct);
+
         return CatalogMatchResolver.Finalize(
             best.Score,
             best.Warnings,
             new CatalogMatchResolver.MatchThresholds(opts.SpotifyApiMinConfidence, opts.SpotifyApiMatchedThreshold),
-            status => BuildResult(song, best.Candidate, best.Score, best.Warnings, status, album));
+            status => BuildResult(song, best.Candidate, best.Score, best.Warnings, status, album) with { Tags = tags, Genre = Metadata.DiscogsGenres.Normalize(Metadata.MultiValue.Join(tags)) });
+    }
+
+    private async Task<string[]> TryGetArtistGenresAsync(string clientId, string clientSecret, string? artistId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(artistId)) return [];
+        try { return await catalogSearch.GetArtistGenresAsync(clientId, clientSecret, artistId, ct); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogDebug(ex, "Spotify artist genres unavailable for {ArtistId}", artistId);
+            return [];
+        }
     }
 
     private async Task<SpotifyAlbumDetail?> TryGetAlbumDetailAsync(

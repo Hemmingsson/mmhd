@@ -16,7 +16,7 @@ partial class MusicHoarderDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261125175559_AddDiscogsCatalog";
+    public override string LastMigrationId => "20261125200734_AddProviderTags";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -3295,6 +3295,12 @@ partial class MusicHoarderDbContextModelSnapshot : ModelSnapshot
 
                 b.Property<string>("SyncedLyrics")
                     .HasColumnType("text");
+
+                b.Property<string[]>("Tags")
+                    .IsRequired()
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("text[]")
+                    .HasDefaultValueSql("ARRAY[]::text[]");
 
                 b.Property<string>("Title")
                     .HasColumnType("text");

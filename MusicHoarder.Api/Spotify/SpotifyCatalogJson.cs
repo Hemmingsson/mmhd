@@ -14,6 +14,19 @@ namespace MusicHoarder.Api.Spotify;
 /// </summary>
 internal static class SpotifyCatalogJson
 {
+    internal static string[] ParseArtistGenres(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("genres", out var genres) && genres.ValueKind == JsonValueKind.Array
+                ? ProviderTags.Combine(genres.EnumerateArray().Where(g => g.ValueKind == JsonValueKind.String).Select(g => g.GetString()))
+                : [];
+        }
+        catch (JsonException) { return []; }
+    }
+
     /// <summary>A <c>type=track</c> search body: every <c>tracks.items</c> row that reads as a track.</summary>
     internal static IReadOnlyList<SpotifyCatalogTrack> ParseSearchResponse(string json)
     {
@@ -292,11 +305,14 @@ internal static class SpotifyCatalogJson
 
         var artist = "";
         string? artistsMulti = null;
+        string? artistId = null;
         if (track.TryGetProperty("artists", out var artists) && artists.ValueKind == JsonValueKind.Array)
         {
             var names = new List<string>();
             foreach (var a in artists.EnumerateArray())
             {
+                if (artistId is null && a.TryGetProperty("id", out var artistIdElement) && artistIdElement.ValueKind == JsonValueKind.String)
+                    artistId = artistIdElement.GetString();
                 if (a.TryGetProperty("name", out var an) && an.ValueKind == JsonValueKind.String)
                     names.Add(an.GetString()!);
             }
@@ -358,6 +374,6 @@ internal static class SpotifyCatalogJson
         return new SpotifyCatalogTrack(
             id, name, artist, albumName, releaseYear, trackNumber, durationMs, isrc,
             Artists: artistsMulti, DiscNumber: discNumber, AlbumType: albumType, TotalTracks: totalTracks,
-            AlbumId: albumId, AlbumArtUrl: albumArtUrl, Explicit: isExplicit);
+            AlbumId: albumId, AlbumArtUrl: albumArtUrl, Explicit: isExplicit, ArtistId: artistId);
     }
 }

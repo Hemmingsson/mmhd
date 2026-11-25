@@ -189,7 +189,8 @@ public class MusicBrainzWebEnrichmentProvider(
             CatalogNumber: rec.CatalogNumber,
             Upc: rec.Barcode,
             ArtistSort: rec.ArtistSort,
-            AlbumArtistSort: rec.AlbumArtistSort);
+            AlbumArtistSort: rec.AlbumArtistSort,
+            Tags: rec.Tags);
     }
 
     private static (double Score, List<string> Warnings) Score(

@@ -302,6 +302,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<AutoScanBackgroundService>();
         services.AddHostedService<FingerprintBackgroundService>();
         services.AddHostedService<EnrichmentBackgroundService>();
+        services.AddHostedService<ProviderTagsRecoveryService>();
         services.AddHostedService<LibraryBuilderBackgroundService>();
 
         // Wishlist downloader: fetches Pending wishlist items into the source tree, then the scanner

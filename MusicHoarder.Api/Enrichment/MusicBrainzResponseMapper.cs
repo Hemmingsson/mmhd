@@ -70,7 +70,8 @@ internal static class MusicBrainzResponseMapper
             CatalogNumber: string.IsNullOrWhiteSpace(catalogNumber) ? null : catalogNumber,
             Barcode: string.IsNullOrWhiteSpace(release?.Barcode) ? null : release!.Barcode,
             ArtistSort: BuildArtistSortCredit(r.ArtistCredit),
-            AlbumArtistSort: r.ArtistCredit is { Count: > 0 } ? NullIfBlank(r.ArtistCredit[0].Artist?.SortName) : null);
+            AlbumArtistSort: r.ArtistCredit is { Count: > 0 } ? NullIfBlank(r.ArtistCredit[0].Artist?.SortName) : null,
+            Tags: ProviderTags.Combine((r.Genres ?? []).Concat(r.Tags ?? []).Select(g => g.Name)));
     }
 
     internal static MusicBrainzRelease MapRelease(MusicBrainzReleaseDetailDto r)
