@@ -173,6 +173,28 @@ public class MusicHoarderDbContext : DbContext
     public DbSet<Session> Sessions { get; set; } = null!;
     public DbSet<MagicLinkToken> MagicLinkTokens { get; set; } = null!;
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; } = null!;
+    public DbSet<CatalogArtist> CatalogArtists { get; set; } = null!;
+    public DbSet<CatalogArtistNameVariation> CatalogArtistNameVariations { get; set; } = null!;
+    public DbSet<CatalogArtistRelation> CatalogArtistRelations { get; set; } = null!;
+    public DbSet<CatalogLabel> CatalogLabels { get; set; } = null!;
+    public DbSet<CatalogLabelSublabel> CatalogLabelSublabels { get; set; } = null!;
+    public DbSet<CatalogMaster> CatalogMasters { get; set; } = null!;
+    public DbSet<CatalogRelease> CatalogReleases { get; set; } = null!;
+    public DbSet<CatalogTrack> CatalogTracks { get; set; } = null!;
+    public DbSet<CatalogCredit> CatalogCredits { get; set; } = null!;
+    public DbSet<CatalogReleaseLabel> CatalogReleaseLabels { get; set; } = null!;
+    public DbSet<CatalogReleaseFormat> CatalogReleaseFormats { get; set; } = null!;
+    public DbSet<CatalogReleaseIdentifier> CatalogReleaseIdentifiers { get; set; } = null!;
+    public DbSet<CatalogStyle> CatalogStyles { get; set; } = null!;
+    public DbSet<CatalogReleaseStyle> CatalogReleaseStyles { get; set; } = null!;
+    public DbSet<CatalogMasterStyle> CatalogMasterStyles { get; set; } = null!;
+    public DbSet<CatalogDiscographyEntry> CatalogDiscographyEntries { get; set; } = null!;
+    public DbSet<CatalogUrl> CatalogUrls { get; set; } = null!;
+    public DbSet<CatalogImage> CatalogImages { get; set; } = null!;
+    public DbSet<CatalogExternalId> CatalogExternalIds { get; set; } = null!;
+    public DbSet<CatalogRawSnapshot> CatalogRawSnapshots { get; set; } = null!;
+    public DbSet<CatalogIdentityDecision> CatalogIdentityDecisions { get; set; } = null!;
+    public DbSet<CatalogBackfillRun> CatalogBackfillRuns { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -211,6 +233,9 @@ public class MusicHoarderDbContext : DbContext
             entity.HasIndex(e => new { e.OwnerUserId, e.AcquisitionIntent });
             // Supports identifier-based lookups / dedupe by ISRC.
             entity.HasIndex(e => e.Isrc);
+            // The catalog joins owned songs to Discogs releases and masters.
+            entity.HasIndex(e => new { e.OwnerUserId, e.DiscogsReleaseId });
+            entity.HasIndex(e => new { e.OwnerUserId, e.DiscogsMasterId });
             // Drives the lyrics backfill + re-check sweeps, which scan by lyrics state and take the
             // longest-overdue re-checks first (EnrichmentQueries.WhereReadyForLyricsRecheck).
             entity.HasIndex(e => new { e.DeletedAtUtc, e.LyricsStatus, e.LyricsNextRecheckAfterUtc });
@@ -988,6 +1013,151 @@ public class MusicHoarderDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        ConfigureCatalog(modelBuilder, hasUser);
+    }
+
+    /// <summary>
+    /// The Discogs catalog graph. Reference data shared across users — no owner filter, like
+    /// <see cref="CanonicalAlbum"/> — except the identity decisions and backfill runs, which are about
+    /// one owner's library and carry its filter.
+    /// </summary>
+    private void ConfigureCatalog(ModelBuilder modelBuilder, bool hasUser)
+    {
+        modelBuilder.Entity<CatalogArtist>(entity =>
+        {
+            entity.HasIndex(e => e.DiscogsId).IsUnique();
+            entity.HasIndex(e => e.NameKey);
+            entity.HasIndex(e => new { e.FetchState, e.RefreshAfterUtc });
+            entity.HasMany(e => e.NameVariations).WithOne(v => v.Artist).HasForeignKey(v => v.ArtistId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Relations).WithOne(r => r.Artist).HasForeignKey(r => r.ArtistId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<CatalogArtistNameVariation>(entity => entity.HasIndex(e => new { e.ArtistId, e.Sequence }).IsUnique());
+        modelBuilder.Entity<CatalogArtistRelation>(entity =>
+        {
+            entity.HasIndex(e => new { e.ArtistId, e.Kind, e.Sequence }).IsUnique();
+            // "Which groups is this artist in" and "whose alias is this" read the other side.
+            entity.HasIndex(e => e.RelatedDiscogsId);
+        });
+
+        modelBuilder.Entity<CatalogLabel>(entity =>
+        {
+            entity.HasIndex(e => e.DiscogsId).IsUnique();
+            entity.HasIndex(e => e.NameKey);
+            entity.HasIndex(e => e.ParentDiscogsId);
+            entity.HasIndex(e => new { e.FetchState, e.RefreshAfterUtc });
+            entity.HasMany(e => e.Sublabels).WithOne(s => s.Label).HasForeignKey(s => s.LabelId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<CatalogLabelSublabel>(entity => entity.HasIndex(e => new { e.LabelId, e.Sequence }).IsUnique());
+
+        modelBuilder.Entity<CatalogMaster>(entity =>
+        {
+            entity.HasIndex(e => e.DiscogsId).IsUnique();
+            entity.HasIndex(e => new { e.ArtistKey, e.TitleKey });
+            entity.HasIndex(e => e.TitleKey);
+            entity.HasIndex(e => new { e.FetchState, e.RefreshAfterUtc });
+            entity.HasMany(e => e.Releases).WithOne(r => r.Master).HasForeignKey(r => r.MasterId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CatalogRelease>(entity =>
+        {
+            entity.HasIndex(e => e.DiscogsId).IsUnique();
+            entity.HasIndex(e => e.MasterDiscogsId);
+            entity.HasIndex(e => new { e.ArtistKey, e.TitleKey });
+            entity.HasIndex(e => e.TitleKey);
+            entity.HasIndex(e => new { e.Year, e.Country });
+            entity.HasIndex(e => new { e.FetchState, e.RefreshAfterUtc });
+            entity.HasMany(e => e.Tracks).WithOne(t => t.Release).HasForeignKey(t => t.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Credits).WithOne(c => c.Release).HasForeignKey(c => c.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Labels).WithOne(l => l.Release).HasForeignKey(l => l.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Formats).WithOne(f => f.Release).HasForeignKey(f => f.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Identifiers).WithOne(i => i.Release).HasForeignKey(i => i.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<CatalogTrack>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReleaseId, e.Sequence }).IsUnique();
+            entity.HasIndex(e => e.TitleKey);
+        });
+        modelBuilder.Entity<CatalogCredit>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReleaseId, e.Sequence }).IsUnique();
+            // An artist's credits across releases (producer, remixer…).
+            entity.HasIndex(e => new { e.ArtistDiscogsId, e.Kind });
+        });
+        modelBuilder.Entity<CatalogReleaseLabel>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReleaseId, e.Sequence }).IsUnique();
+            entity.HasIndex(e => new { e.LabelDiscogsId, e.Kind });
+        });
+        modelBuilder.Entity<CatalogReleaseFormat>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReleaseId, e.Sequence }).IsUnique();
+            entity.HasIndex(e => e.Name);
+        });
+        modelBuilder.Entity<CatalogReleaseIdentifier>(entity =>
+        {
+            entity.HasIndex(e => new { e.ReleaseId, e.Sequence }).IsUnique();
+            // Barcode lookups.
+            entity.HasIndex(e => new { e.Type, e.Value });
+        });
+
+        modelBuilder.Entity<CatalogStyle>(entity => entity.HasIndex(e => e.NameKey).IsUnique());
+        modelBuilder.Entity<CatalogReleaseStyle>(entity =>
+        {
+            entity.HasKey(e => new { e.ReleaseId, e.StyleId });
+            entity.HasIndex(e => e.StyleId);
+            entity.HasOne(e => e.Release).WithMany(r => r.Styles).HasForeignKey(e => e.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Style).WithMany().HasForeignKey(e => e.StyleId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<CatalogMasterStyle>(entity =>
+        {
+            entity.HasKey(e => new { e.MasterId, e.StyleId });
+            entity.HasIndex(e => e.StyleId);
+            entity.HasOne(e => e.Master).WithMany(m => m.Styles).HasForeignKey(e => e.MasterId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Style).WithMany().HasForeignKey(e => e.StyleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CatalogDiscographyEntry>(entity =>
+        {
+            entity.HasIndex(e => new { e.OwnerKind, e.OwnerId, e.Sequence });
+            entity.HasIndex(e => new { e.OwnerKind, e.OwnerId, e.ItemKind, e.ItemDiscogsId, e.Role }).IsUnique();
+            entity.HasIndex(e => e.MasterId);
+            entity.HasIndex(e => e.ReleaseId);
+            entity.HasOne(e => e.Master).WithMany().HasForeignKey(e => e.MasterId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Release).WithMany().HasForeignKey(e => e.ReleaseId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CatalogUrl>(entity => entity.HasIndex(e => new { e.EntityKind, e.EntityId, e.Sequence }).IsUnique());
+        modelBuilder.Entity<CatalogImage>(entity =>
+        {
+            entity.HasIndex(e => new { e.EntityKind, e.EntityId, e.Sequence }).IsUnique();
+            // The image downloader claims what is not downloaded yet.
+            entity.HasIndex(e => new { e.Status, e.Id });
+        });
+        modelBuilder.Entity<CatalogExternalId>(entity =>
+        {
+            entity.HasIndex(e => new { e.Provider, e.EntityKind, e.ExternalId }).IsUnique();
+            entity.HasIndex(e => new { e.EntityKind, e.EntityId });
+        });
+        modelBuilder.Entity<CatalogRawSnapshot>(entity =>
+        {
+            entity.HasIndex(e => new { e.ResourceKind, e.DiscogsId, e.PayloadHash }).IsUnique();
+            entity.HasIndex(e => new { e.ResourceKind, e.DiscogsId, e.FetchedAtUtc });
+        });
+
+        modelBuilder.Entity<CatalogIdentityDecision>(entity =>
+        {
+            entity.HasIndex(e => new { e.OwnerUserId, e.SubjectKind, e.SubjectKey, e.Status });
+            entity.HasIndex(e => new { e.OwnerUserId, e.Status, e.CreatedAtUtc });
+            entity.HasIndex(e => e.RunId);
+            entity.HasIndex(e => new { e.TargetKind, e.DiscogsId });
+            entity.HasQueryFilter(e => !hasUser || e.OwnerUserId == FilterUserId);
+        });
+        modelBuilder.Entity<CatalogBackfillRun>(entity =>
+        {
+            entity.HasIndex(e => new { e.OwnerUserId, e.Kind, e.Status });
+            entity.HasQueryFilter(e => !hasUser || e.OwnerUserId == FilterUserId);
         });
     }
 }

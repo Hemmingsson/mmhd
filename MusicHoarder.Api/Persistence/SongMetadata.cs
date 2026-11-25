@@ -37,7 +37,10 @@ public record EnrichmentMatchData(
     string? Composer = null,
     string? Copyright = null,
     string? ArtistSort = null,
-    string? AlbumArtistSort = null);
+    string? AlbumArtistSort = null,
+    long? DiscogsReleaseId = null,
+    long? DiscogsMasterId = null,
+    long? DiscogsArtistId = null);
 
 /// <summary>
 /// Why this track is in the collection — did the owner ask for it, or did the app add it on their
@@ -221,6 +224,16 @@ public class SongMetadata
     public string? MusicBrainzReleaseId { get; set; }
     public string? MusicBrainzReleaseGroupId { get; set; }
     public string? AlbumArtistMusicBrainzId { get; set; }
+
+    /// <summary>The Discogs release (edition) this song's file is from. Additive: never replaces an MBID.</summary>
+    public long? DiscogsReleaseId { get; set; }
+
+    /// <summary>The Discogs master (album) of <see cref="DiscogsReleaseId"/>.</summary>
+    public long? DiscogsMasterId { get; set; }
+
+    /// <summary>The Discogs artist of the album artist credit.</summary>
+    public long? DiscogsArtistId { get; set; }
+
     public string? SpotifyId { get; set; }
     public string? AcoustIdTrackId { get; set; }
     public string? LrclibId { get; set; }
@@ -979,6 +992,9 @@ public class SongMetadata
         MusicBrainzReleaseId = match.MusicBrainzReleaseId ?? MusicBrainzReleaseId;
         MusicBrainzReleaseGroupId = match.MusicBrainzReleaseGroupId ?? MusicBrainzReleaseGroupId;
         AlbumArtistMusicBrainzId = match.AlbumArtistMusicBrainzId ?? AlbumArtistMusicBrainzId;
+        DiscogsReleaseId = match.DiscogsReleaseId ?? DiscogsReleaseId;
+        DiscogsMasterId = match.DiscogsMasterId ?? DiscogsMasterId;
+        DiscogsArtistId = match.DiscogsArtistId ?? DiscogsArtistId;
         ArtistMusicBrainzIds = string.IsNullOrWhiteSpace(match.ArtistMusicBrainzIds) ? ArtistMusicBrainzIds : match.ArtistMusicBrainzIds;
         SpotifyId = match.SpotifyId ?? SpotifyId;
         AcoustIdTrackId = match.AcoustIdTrackId ?? AcoustIdTrackId;
@@ -1084,6 +1100,9 @@ public class SongMetadata
         MusicBrainzReleaseGroupId = null;
         AlbumArtistMusicBrainzId = null;
         ArtistMusicBrainzIds = null;
+        DiscogsReleaseId = null;
+        DiscogsMasterId = null;
+        DiscogsArtistId = null;
 
         // Descriptive metadata is enrichment-sourced (no captured original to restore), so clear it.
         Genre = null;
