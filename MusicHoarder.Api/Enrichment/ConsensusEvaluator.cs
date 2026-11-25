@@ -36,7 +36,12 @@ public static partial class ConsensusEvaluator
         /// for these; non-corroborated album fields are proposed, not applied. Null for non-cluster
         /// verdicts (solo provider / fingerprint / tracker), which carry no release corroboration.
         /// </summary>
-        IReadOnlySet<string>? CorroboratedFields = null);
+        IReadOnlySet<string>? CorroboratedFields = null,
+        /// <summary>
+        /// Fields a supporting provider (Discogs) laid over the winner (see <see cref="FieldAuthority"/>).
+        /// The merger only fills these, and their changes are attributed to that provider.
+        /// </summary>
+        IReadOnlySet<string>? SupportingFields = null);
 
     internal sealed record Candidate(
         EnrichmentProvider Provider,
@@ -71,9 +76,17 @@ public static partial class ConsensusEvaluator
         var now = utcNow ?? DateTime.UtcNow;
         var deferralWindow = maxRateLimitDeferral ?? DefaultRateLimitDeferral;
 
-        var verdict = EvaluateInternal(
-            song, enabledProviders, applicableProviders ?? enabledProviders, identityOptions, corroborationFloor,
-            preferOriginalRelease, now, deferralWindow, relaxDownloadDurationMismatch, sourceRoot);
+        // A supporting provider takes no part in the verdict: not as a vote, not as a provider whose
+        // turn the picture waits for, not as a rate limit to defer on.
+        var voting = enabledProviders.Where(p => !FieldAuthority.IsSupporting(p)).ToHashSet();
+        var votingApplicable = (applicableProviders ?? enabledProviders)
+            .Where(p => !FieldAuthority.IsSupporting(p)).ToHashSet();
+
+        var verdict = WithSupportingOverlay(
+            EvaluateInternal(
+                song, voting, votingApplicable, identityOptions, corroborationFloor,
+                preferOriginalRelease, now, deferralWindow, relaxDownloadDurationMismatch, sourceRoot),
+            song, enabledProviders);
 
         // A confident verdict the answered providers already reached stands — never block a build
         // waiting on a provider that may never recover (e.g. iTunes throttling a shared IP). A
@@ -84,13 +97,47 @@ public static partial class ConsensusEvaluator
             return verdict;
 
         var hasFreshRateLimit = song.ProviderAttempts.Any(a =>
-            enabledProviders.Contains(a.Provider)
+            voting.Contains(a.Provider)
             && a.Status == ProviderAttemptStatus.RateLimited
             && IsRateLimitFresh(a, now, deferralWindow));
 
         return hasFreshRateLimit
             ? new ConsensusResult(EnrichmentStatus.Pending, null, 0, [])
             : verdict;
+    }
+
+    /// <summary>
+    /// Lays a supporting provider's catalog fields over a Matched winner. Only a confident Discogs
+    /// candidate whose release is the winner's album contributes; anything else leaves the verdict as is.
+    /// The corroborated set loses the fields Discogs now supplies, so two streaming providers agreeing
+    /// on another label can't license overwriting a curated value with Discogs' one.
+    /// </summary>
+    private static ConsensusResult WithSupportingOverlay(
+        ConsensusResult verdict, SongMetadata song, IReadOnlySet<EnrichmentProvider> enabledProviders)
+    {
+        if (verdict.Status != EnrichmentStatus.Matched
+            || verdict.Winner is null
+            || !enabledProviders.Contains(EnrichmentProvider.Discogs))
+            return verdict;
+
+        var attempt = song.ProviderAttempts.FirstOrDefault(a =>
+            a.Provider == EnrichmentProvider.Discogs
+            && a.Status == ProviderAttemptStatus.Matched
+            && a.MatchedDataJson is not null);
+        if (attempt is null || TryDeserialize(attempt.MatchedDataJson!) is not { } discogs
+            || discogs.RecommendedStatus != EnrichmentStatus.Matched)
+            return verdict;
+
+        var (winner, fields) = FieldAuthority.OverlayDiscogs(verdict.Winner, discogs);
+        if (ReferenceEquals(winner, verdict.Winner))
+            return verdict;
+
+        return verdict with
+        {
+            Winner = winner,
+            CorroboratedFields = verdict.CorroboratedFields?.Where(f => !fields.Contains(f)).ToHashSet(),
+            SupportingFields = fields,
+        };
     }
 
     /// <summary>True while a rate-limited attempt is still within the deferral window (or has no

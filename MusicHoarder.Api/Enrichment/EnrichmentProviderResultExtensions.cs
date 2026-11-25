@@ -57,6 +57,9 @@ public static class EnrichmentProviderResultExtensions
             candidate.Composer,
             candidate.Copyright,
             candidate.ArtistSort,
-            candidate.AlbumArtistSort);
+            candidate.AlbumArtistSort,
+            candidate.DiscogsReleaseId,
+            candidate.DiscogsMasterId,
+            candidate.DiscogsArtistId);
     }
 }

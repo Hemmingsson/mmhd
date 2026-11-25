@@ -249,6 +249,7 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
         SongMetadata song, IReadOnlySet<EnrichmentProvider> enabled, DateTime now, TimeSpan deferralWindow)
         => song.ProviderAttempts.Any(a =>
             enabled.Contains(a.Provider)
+            && !FieldAuthority.IsSupporting(a.Provider)
             && a.Status == ProviderAttemptStatus.RateLimited
             && (a.RateLimitedSinceUtc is null || now - a.RateLimitedSinceUtc.Value <= deferralWindow));
 
@@ -309,7 +310,8 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
                 // strong multi-provider consensus justifies an upgrade; record every change.
                 var changes = MetadataMerger.ApplyMatch(
                     song, consensus.Winner, consensus.Confidence, consensus.AgreeingProviders.Count,
-                    _options.Value.AutoUpgradeConfidence, warningsJson, consensus.CorroboratedFields);
+                    _options.Value.AutoUpgradeConfidence, warningsJson, consensus.CorroboratedFields,
+                    consensus.SupportingFields);
 
                 var now = DateTime.UtcNow;
                 foreach (var c in changes)
@@ -320,7 +322,9 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
                         FieldName = c.Field,
                         OldValue = c.OldValue,
                         NewValue = c.NewValue,
-                        Source = consensus.Winner.MatchedBy,
+                        Source = MetadataMerger.IsSupportingChange(c.Field, consensus.SupportingFields)
+                            ? nameof(EnrichmentProvider.Discogs)
+                            : consensus.Winner.MatchedBy,
                         Confidence = consensus.Confidence,
                         CreatedAtUtc = now,
                         AppliedAtUtc = c.Applied ? now : null,
@@ -548,7 +552,7 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
             "AppleMusic" => effective.EnableAppleMusicProvider,
             // Config-only toggle (no runtime/DB setting): the yetracker is a static local catalog.
             "YeTracker" => _options.Value.EnableYeTrackerProvider,
-            _ => true
+            _ => provider.IsEnabled
         };
     }
 
@@ -561,6 +565,7 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
         "Deezer" => EnrichmentProvider.Deezer,
         "AppleMusic" => EnrichmentProvider.AppleMusic,
         "YeTracker" => EnrichmentProvider.YeTracker,
+        "Discogs" => EnrichmentProvider.Discogs,
         _ => null
     };
 
@@ -573,6 +578,9 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
         _providerSemaphores["YeTracker"] = new SemaphoreSlim(1, 1);
         _providerSemaphores["Deezer"] = new SemaphoreSlim(opts.DeezerConcurrency, opts.DeezerConcurrency);
         _providerSemaphores["AppleMusic"] = new SemaphoreSlim(opts.AppleMusicConcurrency, opts.AppleMusicConcurrency);
+        // The Discogs client paces itself (one shared request gate); one song at a time keeps the
+        // album cache effective for the album's next track.
+        _providerSemaphores["Discogs"] = new SemaphoreSlim(1, 1);
     }
 
     private SemaphoreSlim GetProviderSemaphore(string providerName) =>

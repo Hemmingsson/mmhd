@@ -44,6 +44,8 @@ export function confidencePercent(track: Pick<ApiSong, 'matchConfidence'>): stri
 
 /** Friendly source label for a provider name (handles backend enum + demo names). */
 export function providerLabel(name: string | null | undefined): string {
+  // Discogs reports how it matched after a colon ("Discogs:search", "Discogs:barcode").
+  if (name?.startsWith('Discogs')) return 'Discogs';
   switch (name) {
     case 'SpotifyAPI':
       return 'Spotify';
@@ -229,10 +231,10 @@ export function providerColor(name: string | null | undefined): string {
       return '#fa243c';
     case 'Community Tracker':
       return '#4a9a6a';
+    case 'Discogs':
+      return '#5b5b5b';
     default:
       switch (name) {
-        case 'Discogs':
-          return '#5b5b5b';
         case 'Deezer':
           return '#ff5500';
         default:
@@ -263,6 +265,8 @@ export function providerSearchUrl(
       return `https://musicbrainz.org/search?query=${q}&type=recording&method=indexed`;
     case 'Tracker':
       return `https://juicewrldapi.com/juicewrld/songs/?format=json&search=${q}`;
+    case 'Discogs':
+      return `https://www.discogs.com/search/?q=${q}&type=all`;
     case 'AcoustID':
     case 'YeTracker':
     default:

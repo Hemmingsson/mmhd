@@ -159,6 +159,7 @@ public sealed class EnrichmentRetriesInsight(
         EnrichmentProvider.MusicBrainzWeb => "MusicBrainz",
         EnrichmentProvider.AppleMusic => "Apple Music",
         EnrichmentProvider.YeTracker => "Ye tracker",
+        EnrichmentProvider.Discogs => "Discogs",
         _ => provider.ToString(),
     };
 }

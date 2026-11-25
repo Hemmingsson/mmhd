@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { reasonFor, confidencePercent } from './review-helpers';
+import {
+  reasonFor,
+  confidencePercent,
+  providerLabel,
+  providerColor,
+  providerSearchUrl
+} from './review-helpers';
 
 describe('reasonFor', () => {
   it('returns no_fingerprint when the fingerprint is missing', () => {
@@ -44,5 +50,19 @@ describe('confidencePercent', () => {
   it('returns null when confidence is unknown', () => {
     expect(confidencePercent({ matchConfidence: null })).toBeNull();
     expect(confidencePercent({ matchConfidence: undefined })).toBeNull();
+  });
+});
+
+describe('Discogs provider names', () => {
+  it('labels every Discogs match method as Discogs', () => {
+    expect(providerLabel('Discogs')).toBe('Discogs');
+    expect(providerLabel('Discogs:search')).toBe('Discogs');
+    expect(providerColor('Discogs:barcode')).toBe(providerColor('Discogs'));
+  });
+
+  it('links a Discogs search', () => {
+    expect(providerSearchUrl('Discogs', 'Aphex Twin Xtal')).toBe(
+      'https://www.discogs.com/search/?q=Aphex%20Twin%20Xtal&type=all'
+    );
   });
 });
