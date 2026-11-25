@@ -10,7 +10,8 @@ fi
 context=$(mktemp -d)
 trap 'rm -rf "$context"' EXIT
 export MH_VERSION="$(scripts/mmhd-version.sh)"
-dotnet publish MusicHoarder.Api -c Release -r linux-arm64 --self-contained false \
+sdk=$(command -v dotnet || printf "%s/.dotnet/dotnet" "$HOME")
+"$sdk" publish MusicHoarder.Api -c Release -r linux-arm64 --self-contained false \
   -p:UseAppHost=false -o "$context/publish"
 docker build --platform linux/arm64 --build-arg "RUNTIME_IMAGE=$runtime" \
   -f docker/mmhd/Dockerfile.api -t "$tag" "$context"
