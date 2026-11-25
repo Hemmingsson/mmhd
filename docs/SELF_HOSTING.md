@@ -177,6 +177,16 @@ web form:
   provider chain quietly falls through to yt-dlp. Etiquette: share a folder in your slskd config —
   zero-share accounts get queued or banned by many peers — and leave MusicHoarder's built-in
   search rate limit alone unless you know why you're raising it.
+- **Discogs catalog** — an admin-only catalog (Catalog in the nav) of artists, labels, masters
+  and releases from [Discogs](https://www.discogs.com/developers), including releases you don't
+  own. Set `DISCOGS_TOKEN` to a personal access token (Discogs → Settings → Developers). Without
+  one, MusicHoarder can only read ids it already knows, at 25 requests a minute; search, matching,
+  backfill and images need the token (60 a minute). `DISCOGS_ENRICHMENT=true` lets enrichment add
+  label, catalog number and styles (shown as genre) to matched songs; it never changes which song
+  a file is. `DISCOGS_BACKFILL=true` runs the library link backfill in the background; runs can be
+  dry-run, paused, resumed and rolled back from the catalog's admin page. Queueing a release
+  always goes through a provider that can actually serve it; a release no provider has shows its
+  purchase links instead.
 - **Streaming-FLAC acquisition (`spotiflac`)** — *legally grey, off by default.* MusicHoarder can
   fetch true-lossless FLAC for wishlist downloads via an **acquisition sidecar** (a small FastAPI
   wrapper around the [`SpotiFLAC`](https://pypi.org/project/SpotiFLAC/) module, in
