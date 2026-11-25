@@ -10,6 +10,7 @@ RUN dotnet restore MusicHoarder.Api/MusicHoarder.Api.csproj
 
 # Copy source and publish
 COPY MusicHoarder.Api/ MusicHoarder.Api/
+COPY frontend/src/lib/library/discogs-taxonomy.json frontend/src/lib/library/discogs-taxonomy.json
 COPY MusicHoarder.ServiceDefaults/ MusicHoarder.ServiceDefaults/
 
 ARG MH_VERSION=2.7.0-mmhd

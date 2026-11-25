@@ -84,6 +84,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="../frontend/src/lib/library/discogs-taxonomy.json" LogicalName="DiscogsTaxonomy.json" />
         <EmbeddedResource Include="Auth\Resources\demo-songs.json" />
     </ItemGroup>
 

@@ -240,9 +240,9 @@ public class AlbumProjectionTests
             Song(id: 1),
             Song(id: 2, genre: "Hip Hop", label: "Roc-A-Fella", catalogNumber: "B0014695-02",
                 upc: "602527549293", releaseDate: "2010-11-22", musicBrainzReleaseId: "mbid-1"),
-            Song(id: 3, genre: "Rap", label: "Def Jam", musicBrainzReleaseId: "mbid-2")).Single();
+            Song(id: 3, genre: "Rap / Ambient, Jungle", label: "Def Jam", musicBrainzReleaseId: "mbid-2")).Single();
 
-        Assert.Equal("Hip Hop", album.Genre);
+        Assert.Equal("Hip Hop; Ambient; Jungle", album.Genre);
         Assert.Equal("Roc-A-Fella", album.Label);
         Assert.Equal("B0014695-02", album.CatalogNumber);
         Assert.Equal("602527549293", album.Upc);

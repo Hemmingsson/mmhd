@@ -429,7 +429,7 @@ public static class SongsEndpoints
             s.HasCoverArt,
             s.HasFingerprint,
                 s.Isrc, s.MusicBrainzId, s.MusicBrainzReleaseId, s.SpotifyId, s.AcoustIdTrackId, s.LrclibId,
-            s.Genre, s.ReleaseDate, s.Label,
+            Genre = Metadata.DiscogsGenres.Normalize(s.Genre), s.ReleaseDate, s.Label,
             s.EnrichmentStatus, s.MatchedBy, s.MatchConfidence,
             MatchWarnings = matchWarnings,
             // Released vs unreleased (leak/snippet/stem), derived from the tracker category the

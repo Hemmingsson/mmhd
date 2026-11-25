@@ -148,7 +148,6 @@ internal static class AlbumProjection
             entry.DurationSeconds += row.DurationSeconds ?? 0;
             entry.ByteSize += row.FileSizeBytes;
             if (row.Year is > 0 && (entry.Year is null or 0 || row.Year < entry.Year)) entry.Year = row.Year;
-            entry.Genre ??= NonEmpty(row.Genre);
             entry.Label ??= NonEmpty(row.Label);
             entry.CatalogNumber ??= NonEmpty(row.CatalogNumber);
             entry.Upc ??= NonEmpty(row.Upc);
@@ -238,7 +237,6 @@ internal static class AlbumProjection
                 combined.PlayCount += other.PlayCount;
                 if (other.Year is > 0 && (combined.Year is null or 0 || other.Year < combined.Year))
                     combined.Year = other.Year;
-                combined.Genre ??= other.Genre;
                 combined.Label ??= other.Label;
                 combined.CatalogNumber ??= other.CatalogNumber;
                 combined.Upc ??= other.Upc;
@@ -407,7 +405,6 @@ internal static class AlbumProjection
         public int TrackCount { get; set; }
         public int DurationSeconds { get; set; }
         public long ByteSize { get; set; }
-        public string? Genre { get; set; }
         public string? Label { get; set; }
         public string? CatalogNumber { get; set; }
         public string? Upc { get; set; }
@@ -432,7 +429,7 @@ internal static class AlbumProjection
             TrackCount = TrackCount,
             DurationSeconds = DurationSeconds,
             ByteSize = ByteSize,
-            Genre = Genre,
+            Genre = Metadata.MultiValue.Join(Tracks.SelectMany(track => Metadata.DiscogsGenres.Tags(track.Genre)).Distinct()),
             Label = Label,
             CatalogNumber = CatalogNumber,
             Upc = Upc,

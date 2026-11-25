@@ -239,7 +239,7 @@ public class MetadataMergerTests
                 copyright: "© 2019 Def Jam", artistSort: "Artist, The", albumArtistSort: "Artist, The"),
             confidence: 0.92, providers: 1);
 
-        Assert.Equal("Hip Hop; Rap", song.Genre);
+        Assert.Equal("Hip Hop", song.Genre);
         Assert.Equal("2019-03-15", song.ReleaseDate);
         Assert.Equal("2018", song.OriginalReleaseDate);
         Assert.Equal("Def Jam", song.Label);

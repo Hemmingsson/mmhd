@@ -86,8 +86,10 @@ public class ListeningStatsCalculatorTests
     [Fact]
     public void Top_lists_are_capped()
     {
+        string[] genres = ["House", "Ambient", "Jungle", "Techno", "Disco", "Rock", "Jazz", "Pop",
+            "Latin", "Classical", "Reggae", "Blues", "Electronic"];
         var events = Enumerable.Range(1, 40)
-            .Select(i => Play(i, Now.AddHours(-i), artist: $"Artist {i}", album: $"Album {i}", genre: $"G{i}"))
+            .Select(i => Play(i, Now.AddHours(-i), artist: $"Artist {i}", album: $"Album {i}", genre: genres[i % genres.Length]))
             .ToList();
         var stats = Compute(events);
 
@@ -109,16 +111,16 @@ public class ListeningStatsCalculatorTests
     }
 
     [Fact]
-    public void Genres_split_on_the_multi_value_delimiter()
+    public void Genres_count_each_canonical_style_once_per_listen()
     {
         var day = Now.AddDays(-1);
         var stats = Compute([
-            Play(1, day, genre: "Hip Hop; Rap"),
+            Play(1, day, genre: "Hip Hop; Rap / Techno"),
             Play(2, day.AddHours(1), genre: "rap"),
         ]);
 
-        Assert.Equal(("Rap", 2), (stats.TopGenres[0].Name, stats.TopGenres[0].Streams));
-        Assert.Equal("Hip Hop", stats.TopGenres[1].Name);
+        Assert.Equal(("Hip Hop", 2), (stats.TopGenres[0].Name, stats.TopGenres[0].Streams));
+        Assert.Equal("Techno", stats.TopGenres[1].Name);
     }
 
     [Fact]

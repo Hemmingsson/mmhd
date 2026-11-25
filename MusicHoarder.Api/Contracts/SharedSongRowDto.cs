@@ -121,7 +121,7 @@ public sealed record SharedSongRowDto
             DurationSeconds = song.DurationSeconds,
             DurationMs = song.DurationMs,
             Bitrate = song.Bitrate,
-            Genre = song.Genre,
+            Genre = Metadata.DiscogsGenres.Normalize(song.Genre),
             ReleaseDate = song.ReleaseDate,
             OriginalReleaseDate = song.OriginalReleaseDate,
             Label = song.Label,

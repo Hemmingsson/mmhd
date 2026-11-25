@@ -978,7 +978,7 @@ public class SongMetadata
         if (match.IsCompilation is not null) IsCompilation = match.IsCompilation.Value;
         if (!string.IsNullOrWhiteSpace(match.ReleaseTypePrimary)) ReleaseTypePrimary = match.ReleaseTypePrimary;
         if (!string.IsNullOrWhiteSpace(match.ReleaseTypes)) ReleaseTypes = match.ReleaseTypes;
-        if (!string.IsNullOrWhiteSpace(match.Genre)) Genre = match.Genre;
+        if (Metadata.DiscogsGenres.Normalize(match.Genre) is { } genre) Genre = genre;
         if (!string.IsNullOrWhiteSpace(match.ReleaseDate)) ReleaseDate = match.ReleaseDate;
         if (!string.IsNullOrWhiteSpace(match.OriginalReleaseDate)) OriginalReleaseDate = match.OriginalReleaseDate;
         if (!string.IsNullOrWhiteSpace(match.Label)) Label = match.Label;

@@ -24,20 +24,9 @@ public static class FieldAuthority
         nameof(SongMetadata.Upc),
     };
 
-    /// <summary>
-    /// Discogs' fifteen broad genres. They are never a visible genre: only styles are. A stored genre
-    /// that is a release's styles plus some of these (what the old tag-time Discogs lookup wrote) may be
-    /// replaced by the styles alone.
-    /// </summary>
-    private static readonly HashSet<string> BroadGenres = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Blues", "Brass & Military", "Children's", "Classical", "Electronic", "Folk, World, & Country",
-        "Funk / Soul", "Hip Hop", "Jazz", "Latin", "Non-Music", "Pop", "Reggae", "Rock", "Stage & Screen",
-    };
-
     public static bool IsSupporting(EnrichmentProvider provider) => provider is EnrichmentProvider.Discogs;
 
-    public static bool IsBroadGenre(string value) => BroadGenres.Contains(value.Trim());
+    public static bool IsBroadGenre(string value) => Metadata.DiscogsGenres.IsBroadGenre(value);
 
     /// <summary>
     /// The winner with the Discogs catalog fields laid over it, and the fields that came from Discogs.

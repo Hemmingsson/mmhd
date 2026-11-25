@@ -391,7 +391,7 @@ public class TagLibLibraryTagWriterTests : IDisposable
         using var file = TagLib.File.Create(path);
         var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
 
-        Assert.Equal(["Hip Hop", "Rap"], file.Tag.Genres);
+        Assert.Equal(["Hip Hop"], file.Tag.Genres);
         Assert.Equal(["J. Doe"], file.Tag.Composers);
         Assert.Equal("© 2019 Def Jam", file.Tag.Copyright);
         Assert.Equal(["Def Jam"], xiph.GetField("LABEL"));

@@ -105,12 +105,11 @@ public class TagLibLibraryTagWriter(DiscogsGenreLookup? discogs = null) : ILibra
         // ALBUMARTISTSORT/TSO2/soaa). Multi-values become real repeated frames; empty clears the frame.
         // Discogs genres land in the file only — never mutate song.Genre (that would persist to the DB).
         tag.Genres = release is not null && !compilation && !release.Compilation
-            ? MultiValue.Split(song.Genre)
-                .Concat(release.Genres)
-                .Concat(release.Styles)
+            ? DiscogsGenres.Tags(song.Genre)
+                .Concat(release.Genres.Concat(release.Styles).SelectMany(DiscogsGenres.Tags))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray()
-            : MultiValue.Split(song.Genre);
+            : DiscogsGenres.Tags(song.Genre);
         tag.Composers = MultiValue.Split(song.Composer);
         tag.Copyright = NullIfEmpty(song.Copyright);
         // Sort names align positionally with the single-value display ARTIST / the album artist.

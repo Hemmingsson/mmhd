@@ -102,7 +102,7 @@ public static class MetadataMerger
         // descriptive fields (label/catalog/upc/copyright/album-artist-sort) are gated on the same
         // per-field corroboration as the other album-level fields; genre/composer/artist-sort are
         // recording-level and gated on the blanket consensus flag.
-        MergeText(song, "Genre", song.Genre, winner.Genre, v => song.Genre = v, genreUpgrade, changes);
+        MergeText(song, "Genre", song.Genre, DiscogsGenres.Normalize(winner.Genre), v => song.Genre = v, genreUpgrade, changes);
         MergeText(song, "Composer", song.Composer, winner.Composer, v => song.Composer = v, highConsensus, changes);
         MergeText(song, "ArtistSort", song.ArtistSort, winner.ArtistSort, v => song.ArtistSort = v, highConsensus, changes);
         MergeText(song, "Label", song.Label, winner.Label, v => song.Label = v, Upgrade("Label"), changes);

@@ -141,7 +141,7 @@ public static class ListeningStatsCalculator
         .ToList();
 
     private static List<TopGenre> TopGenres(List<Play> plays) => plays
-        .SelectMany(p => MultiValue.Split(p.Row.Genre).Distinct(StringComparer.OrdinalIgnoreCase))
+        .SelectMany(p => DiscogsGenres.Tags(p.Row.Genre))
         .GroupBy(g => g, StringComparer.OrdinalIgnoreCase)
         .Select(g => new TopGenre(MostCommon(g), g.Count()))
         .OrderByDescending(g => g.Streams)

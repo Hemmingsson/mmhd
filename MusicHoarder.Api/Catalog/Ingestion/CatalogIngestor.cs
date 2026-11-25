@@ -873,9 +873,8 @@ public sealed partial class CatalogIngestor(
         master.Styles.Clear();
         if (styles is null) return;
         var sequence = 0;
-        foreach (var name in styles)
+        foreach (var name in styles.SelectMany(Metadata.DiscogsGenres.Tags).Distinct())
         {
-            if (string.IsNullOrWhiteSpace(name)) continue;
             var style = await EnsureStyleAsync(name, ct);
             master.Styles.Add(new CatalogMasterStyle { StyleId = style.Id, Sequence = sequence++, Style = style });
         }
@@ -886,9 +885,8 @@ public sealed partial class CatalogIngestor(
         release.Styles.Clear();
         if (styles is null) return;
         var sequence = 0;
-        foreach (var name in styles)
+        foreach (var name in styles.SelectMany(Metadata.DiscogsGenres.Tags).Distinct())
         {
-            if (string.IsNullOrWhiteSpace(name)) continue;
             var style = await EnsureStyleAsync(name, ct);
             release.Styles.Add(new CatalogReleaseStyle { StyleId = style.Id, Sequence = sequence++, Style = style });
         }
