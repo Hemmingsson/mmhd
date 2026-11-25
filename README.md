@@ -1,8 +1,6 @@
 # Mattias Music Hoarding Disorder
 
-MMHD is a Discogs-focused fork of [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder). It extends the self-hosted music library with a catalog of Discogs artists, labels, masters and releases, links between that catalog and your collection, and tools for reviewing matches and rolling back a backfill.
-
-Develop against the [MMHD fork](https://github.com/Hemmingsson/mmhd) as `origin`. Keep the original project as `upstream`. To bring in an upstream release, fetch its tags, merge the selected release on a sync branch, and test the library and catalog together before deploying.
+My fork of [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder), with a focus on Discogs labels, artists, and releases.
 
 ## MusicHoarder features
 
