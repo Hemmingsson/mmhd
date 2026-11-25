@@ -35,12 +35,13 @@ public sealed class DiscogsAlbumTracklistProvider(
         if (tracks.Count == 0)
             return null;
 
-        var lead = (release.Artists ?? []).FirstOrDefault(a => a.Id != DiscogsReleaseMatcher.VariousArtistsId);
+        var isVarious = release.Artists?.Any(a => a.Id == DiscogsReleaseMatcher.VariousArtistsId) == true;
+        var lead = DiscogsReleaseMatcher.AlbumArtist(release.Artists, query.AlbumArtist);
         return new AlbumTracklistCandidate(
             Source,
             release.Id.ToString(CultureInfo.InvariantCulture),
             release.Title,
-            DiscogsReleaseMatcher.DisplayName(lead?.Name),
+            isVarious ? "Various Artists" : DiscogsReleaseMatcher.DisplayName(lead?.Name),
             match.Master?.Value.Year ?? release.Year,
             CoverArtUrl: null,
             tracks.Select(t => new CandidateTrack(t.DiscNumber, t.TrackNumber, t.Title, t.DurationMs, null)).ToList());

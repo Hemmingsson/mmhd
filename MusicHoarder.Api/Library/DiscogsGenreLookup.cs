@@ -1,7 +1,9 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using MusicHoarder.Api.Enrichment;
+using MusicHoarder.Api.RateLimiting;
 
 namespace MusicHoarder.Api.Library;
 
@@ -19,54 +21,88 @@ public sealed record DiscogsReleaseForTags(long Id, string Title, DiscogsArtistF
             || (album.IsCompilation && Artists[0].Name == "Various"));
 }
 
-public sealed class DiscogsGenreLookup(IMusicBrainzWebService musicBrainz, HttpClient client,
-    IMemoryCache cache, ILogger<DiscogsGenreLookup> logger)
+public sealed class DiscogsGenreLookup(
+    IMusicBrainzWebService musicBrainz,
+    HttpClient client,
+    IMemoryCache cache,
+    ILogger<DiscogsGenreLookup> logger,
+    TimeProvider time)
 {
-    private readonly SemaphoreSlim gate = new(1);
-    private DateTimeOffset nextRequest;
-    private DateTimeOffset pausedUntil;
+    private static readonly ReconfigurableRateLimiter RateLimiter = new();
+    private static DateTimeOffset pausedUntil;
+    private static readonly TimeSpan PositiveTtl = TimeSpan.FromHours(24);
+    private static readonly TimeSpan NegativeTtl = TimeSpan.FromHours(6);
+    private static readonly TimeSpan DefaultPause = TimeSpan.FromMinutes(1);
+
+    // MemoryCache rejects null values; wrap so a miss is still a cache hit.
+    internal sealed record CacheEntry(DiscogsReleaseForTags? Release);
 
     public async Task<DiscogsReleaseForTags?> FindAsync(Guid mbid, CancellationToken ct)
     {
         var key = $"discogs-release:{mbid:D}";
-        await gate.WaitAsync(ct);
+        if (cache.TryGetValue(key, out CacheEntry? hit)) return hit!.Release;
+        if (time.GetUtcNow() < pausedUntil) return null;
+
+        using var lease = await RateLimiter.AcquireAsync(1, TimeSpan.FromSeconds(3), ct);
+
+        if (cache.TryGetValue(key, out hit)) return hit!.Release;
+        if (time.GetUtcNow() < pausedUntil) return null;
+
         try
         {
-            if (cache.TryGetValue(key, out DiscogsReleaseForTags? cached)) return cached;
-            if (DateTimeOffset.UtcNow < pausedUntil) return null;
             var id = await musicBrainz.DiscogsReleaseIdAsync(mbid, ct);
             DiscogsReleaseForTags? release = null;
             if (long.TryParse(id, out var expected))
             {
-                var delay = nextRequest - DateTimeOffset.UtcNow;
-                if (delay > TimeSpan.Zero) await Task.Delay(delay, ct);
-                nextRequest = DateTimeOffset.UtcNow.AddSeconds(3);
                 using var response = await client.GetAsync($"releases/{expected}", ct);
-                if ((int)response.StatusCode == 429 || (int)response.StatusCode == 503)
+                var now = time.GetUtcNow();
+                if (response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
                 {
-                    var retry = response.Headers.RetryAfter;
-                    pausedUntil = retry?.Date ?? DateTimeOffset.UtcNow.Add(retry?.Delta ?? TimeSpan.FromMinutes(1));
+                    pausedUntil = now.Add(RetryAfterHeader.Read(response, now) ?? DefaultPause);
                     return null;
                 }
-                response.EnsureSuccessStatusCode();
-                release = await response.Content.ReadFromJsonAsync<DiscogsReleaseForTags>(cancellationToken: ct);
-                if (release?.Id != expected || release.Genres is null || release.Styles is null || release.Artists is null)
+
+                if ((int)response.StatusCode is >= 400 and < 500)
+                {
+                    // 404 / other client errors are release-local — cache a miss, do not pause everyone.
+                    Cache(key, null);
                     return null;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    pausedUntil = now.Add(DefaultPause);
+                    return null;
+                }
+
+                release = await response.Content.ReadFromJsonAsync<DiscogsReleaseForTags>(cancellationToken: ct);
+                if (release is null || release.Id != expected || release.Artists is null)
+                    release = null;
+                else
+                    release = release with
+                    {
+                        Genres = release.Genres ?? [],
+                        Styles = release.Styles ?? [],
+                    };
             }
-            cache.Set(key, release, release is null ? TimeSpan.FromMinutes(15) : TimeSpan.FromHours(24));
+
+            Cache(key, release);
             return release;
         }
         catch (ProviderRateLimitedException ex)
         {
-            pausedUntil = DateTimeOffset.UtcNow.Add(ex.RetryAfter);
+            pausedUntil = time.GetUtcNow().Add(ex.RetryAfter);
             return null;
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException || ex is OperationCanceledException && !ct.IsCancellationRequested)
+        catch (Exception ex) when (ex is HttpRequestException or JsonException
+            || (ex is OperationCanceledException && !ct.IsCancellationRequested))
         {
             logger.LogWarning(ex, "Discogs genre lookup unavailable for release {Release}", mbid);
-            pausedUntil = DateTimeOffset.UtcNow.AddMinutes(1);
+            pausedUntil = time.GetUtcNow().Add(DefaultPause);
             return null;
         }
-        finally { gate.Release(); }
     }
+
+    private void Cache(string key, DiscogsReleaseForTags? release) =>
+        cache.Set(key, new CacheEntry(release), release is null ? NegativeTtl : PositiveTtl);
 }

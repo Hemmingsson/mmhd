@@ -36,7 +36,8 @@ internal sealed record AlbumTrackRow(
     DateTime? SpotifyAddedAtUtc,
     DateTime? AcquiredAtUtc,
     DateTime? LibraryBuiltAtUtc,
-    DateTime IndexedAtUtc);
+    DateTime IndexedAtUtc,
+    bool IsCompilation);
 
 /// <summary>
 /// Groups tracks into album cards. This is the single definition of what an album <i>is</i> in this
@@ -185,11 +186,14 @@ internal static class AlbumProjection
     {
         var order = new List<List<Entry>>();
         var byName = new Dictionary<string, List<Entry>>(StringComparer.Ordinal);
+        var sharedCredits = FindSharedCredits(albums);
         foreach (var album in albums)
         {
             // Re-derived from the card's own display names rather than reused from its first track:
             // a merged card takes the lead's names, so this has to fold on what the card shows.
-            var nameKey = NameKey(album.Artist, album.Title);
+            var nameKey = sharedCredits.TryGetValue(album, out var credit)
+                ? credit.Key
+                : NameKey(album.Artist, album.Title);
             if (byName.TryGetValue(nameKey, out var group))
             {
                 group.Add(album);
@@ -218,6 +222,11 @@ internal static class AlbumProjection
 
             var lead = ordered[0];
             var combined = lead.Clone();
+            if (sharedCredits.TryGetValue(lead, out var credit))
+            {
+                combined.Artist = credit.Artist;
+                combined.NameKey = NameKey(credit.Artist, combined.Title);
+            }
             combined.FolderKeys = ordered.Select(a => a.Key).ToList();
             combined.Tracks = SortTracks(ordered.SelectMany(a => a.Tracks).ToList());
 
@@ -244,6 +253,74 @@ internal static class AlbumProjection
 
         return Sorted(merged);
     }
+
+    private sealed record SharedCredit(string Key, string Artist);
+
+    private static Dictionary<Entry, SharedCredit> FindSharedCredits(List<Entry> albums)
+    {
+        var credits = new Dictionary<Entry, SharedCredit>();
+        var compilations = albums
+            .Where(a => a.MusicBrainzReleaseId is not null && a.Title != UnknownAlbum)
+            .GroupBy(a => (a.MusicBrainzReleaseId, Title: a.Title.ToUpperInvariant()));
+
+        foreach (var release in compilations)
+        {
+            // Require two independently filed parts flagged as compilations, and every track to
+            // agree on the exact release id.
+            var tooFewCompilationParts = release
+                .Where(a => a.Tracks.Any(t => t.IsCompilation))
+                .Select(a => a.Artist)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() < 2;
+            var releaseIdsDisagree = release.Any(a =>
+                a.Tracks.Any(t => NonEmpty(t.MusicBrainzReleaseId) != release.Key.MusicBrainzReleaseId));
+            if (tooFewCompilationParts || releaseIdsDisagree)
+                continue;
+
+            var credit = new SharedCredit(
+                $"release::{release.Key.MusicBrainzReleaseId}::{release.Key.Title}",
+                "Various Artists");
+            foreach (var album in release)
+                credits.Add(album, credit);
+        }
+
+        foreach (var release in albums.Where(a => !credits.ContainsKey(a) && a.Year is > 0 && a.Title != UnknownAlbum)
+                     .GroupBy(a => (Title: a.Title.ToUpperInvariant(), a.Year)))
+        {
+            var parts = release.ToArray();
+            if (parts.Length != 2)
+                continue;
+
+            // Exactly two folders: one joint "A / B" credit and one solo that is one of those parts.
+            var joint = Credits(parts[0], parts[1]) ? parts[0]
+                : Credits(parts[1], parts[0]) ? parts[1]
+                : null;
+            if (joint is null)
+                continue;
+
+            var tracks = parts.SelectMany(a => a.Tracks).ToArray();
+            var multipleReleaseIds = tracks.Select(t => NonEmpty(t.MusicBrainzReleaseId))
+                .OfType<string>().Distinct().Count() > 1;
+            var incompleteSequence = !tracks.Select(t => t.TrackNumber ?? 0).Order()
+                .SequenceEqual(Enumerable.Range(1, tracks.Length));
+            if (multipleReleaseIds || incompleteSequence)
+                continue;
+
+            // Explicit joint credit and a complete, complementary sequence are both needed.
+            var credit = new SharedCredit(
+                $"split::{release.Key.Year}::{NameKey(joint.Artist, joint.Title)}",
+                joint.Artist);
+            foreach (var album in parts)
+                credits.Add(album, credit);
+        }
+
+        return credits;
+    }
+
+    private static bool Credits(Entry joint, Entry solo) =>
+        joint.Artist.Contains(" / ", StringComparison.Ordinal)
+        && joint.Artist.Split(" / ", StringSplitOptions.TrimEntries)
+            .Contains(solo.Artist, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Artist, then title. Every album order falls back to this, so cards that tie on the sort the
@@ -322,10 +399,10 @@ internal static class AlbumProjection
     private sealed class Entry
     {
         public required string Key { get; init; }
-        public required string NameKey { get; init; }
+        public required string NameKey { get; set; }
         public List<string>? FolderKeys { get; set; }
         public required string Title { get; init; }
-        public required string Artist { get; init; }
+        public required string Artist { get; set; }
         public int? Year { get; set; }
         public int TrackCount { get; set; }
         public int DurationSeconds { get; set; }

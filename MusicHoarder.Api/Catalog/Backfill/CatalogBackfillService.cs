@@ -47,11 +47,12 @@ public sealed class CatalogBackfillService(
         return ToDto(run);
     }
 
-    public async Task<CatalogBackfillRunDto> RunBatchAsync(int runId, int batchSize, CancellationToken ct = default)
+    public async Task<CatalogBackfillRunDto> RunBatchAsync(
+        Guid ownerId, int runId, int batchSize, CancellationToken ct = default)
     {
         var run = await db.CatalogBackfillRuns
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(r => r.Id == runId, ct)
+            .FirstOrDefaultAsync(r => r.Id == runId && r.OwnerUserId == ownerId, ct)
             ?? throw new InvalidOperationException($"Backfill run {runId} not found.");
 
         if (run.Status is CatalogBackfillStatus.Completed or CatalogBackfillStatus.RolledBack or CatalogBackfillStatus.Cancelled)
@@ -80,7 +81,9 @@ public sealed class CatalogBackfillService(
             // Rate limits and failures outside a single subject (an unwritable image directory, a
             // dropped connection) pause the run; the next batch resumes from the saved cursor.
             db.ChangeTracker.Clear();
-            run = await db.CatalogBackfillRuns.IgnoreQueryFilters().FirstAsync(r => r.Id == runId, ct);
+            run = await db.CatalogBackfillRuns
+                .IgnoreQueryFilters()
+                .FirstAsync(r => r.Id == runId && r.OwnerUserId == ownerId, ct);
             AddRequests(run, requestsBefore);
             run.Status = CatalogBackfillStatus.Paused;
             run.LastError = ex.Message;

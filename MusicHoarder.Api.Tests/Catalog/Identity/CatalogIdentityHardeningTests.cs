@@ -52,6 +52,23 @@ public class CatalogIdentityHardeningTests
     }
 
     [Fact]
+    public async Task ResolveAlbum_BarcodeHit_WithWrongBarcode_IsNotAutoAccepted()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Aphex Twin", "SAW", "Xtal", upc: Barcode);
+        await db.SaveChangesAsync();
+
+        var discogs = BarcodeOnly(new DiscogsSearchResult(505, "release", "Aphex Twin - SAW", Barcode: ["0123456789012"]));
+        var sut = CreateSut(db, new FakeMusicBrainz(), discogs);
+
+        var view = await sut.ResolveAlbumAsync(owner, "Aphex Twin", "SAW", null, dryRun: false);
+
+        Assert.Null(view.Accepted);
+        Assert.DoesNotContain(await db.CatalogIdentityDecisions.ToListAsync(), d => d.DiscogsId == 505);
+    }
+
+    [Fact]
     public async Task ResolveAlbum_CatnoHit_WithDifferentTitle_IsNotAutoAccepted()
     {
         await using var db = NewDb();
@@ -71,6 +88,52 @@ public class CatalogIdentityHardeningTests
 
         Assert.Null(view.Accepted);
         Assert.DoesNotContain(await db.CatalogIdentityDecisions.ToListAsync(), d => d.DiscogsId == 502);
+    }
+
+    [Fact]
+    public async Task ResolveAlbum_CatnoHit_WithDifferentLabel_IsNotAutoAccepted()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Aphex Twin", "SAW", "Xtal", label: "Apollo", catno: "AMB 3922");
+        await db.SaveChangesAsync();
+
+        var discogs = new FakeIdentityDiscogsClient
+        {
+            SearchHandler = q => Page(q.Catno is not null
+                ? [new DiscogsSearchResult(506, "release", "Aphex Twin - SAW", Label: ["Warp"], Catno: "AMB 3922")]
+                : []),
+        };
+        var sut = CreateSut(db, new FakeMusicBrainz(), discogs);
+
+        var view = await sut.ResolveAlbumAsync(owner, "Aphex Twin", "SAW", null, dryRun: false);
+
+        Assert.Null(view.Accepted);
+        Assert.DoesNotContain(await db.CatalogIdentityDecisions.ToListAsync(), d => d.DiscogsId == 506);
+    }
+
+    [Fact]
+    public async Task ResolveAlbum_CatnoHit_WithMatchingLabel_IsAutoAccepted()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        var song = AddSong(db, owner, "Aphex Twin", "SAW", "Xtal", label: "Apollo", catno: "AMB 3922");
+        await db.SaveChangesAsync();
+
+        var discogs = new FakeIdentityDiscogsClient
+        {
+            SearchHandler = q => Page(q.Catno is not null
+                ? [new DiscogsSearchResult(507, "release", "Aphex Twin - SAW", Label: ["Apollo"], Catno: "AMB 3922")]
+                : []),
+        };
+        var sut = CreateSut(db, new FakeMusicBrainz(), discogs);
+
+        var view = await sut.ResolveAlbumAsync(owner, "Aphex Twin", "SAW", null, dryRun: false);
+
+        Assert.NotNull(view.Accepted);
+        Assert.Equal(507, view.Accepted!.DiscogsId);
+        await db.Entry(song).ReloadAsync();
+        Assert.Equal(507, song.DiscogsReleaseId);
     }
 
     [Fact]
@@ -212,6 +275,39 @@ public class CatalogIdentityHardeningTests
     }
 
     [Fact]
+    public async Task ResolveArtist_FeaturedArtistLinkedRelease_IsIgnored()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Main Artist", "Album", "Track", artist: "Guest", discogsArtistId: 45, discogsReleaseId: 100);
+        await db.SaveChangesAsync();
+
+        var sut = CreateSut(db, new FakeMusicBrainz(), new FakeIdentityDiscogsClient { IsAuthenticated = false });
+
+        var view = await sut.ResolveArtistAsync(owner, "Guest", runId: null, dryRun: false);
+
+        Assert.Null(view.Accepted);
+        Assert.Empty(view.Candidates);
+    }
+
+    [Fact]
+    public async Task ResolveArtist_VariousArtistsLinkedRelease_IsIgnored()
+    {
+        await using var db = NewDb();
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Various Artists", "Sampler", "Track", artist: "Aphex Twin",
+            discogsArtistId: 45, discogsReleaseId: 100);
+        await db.SaveChangesAsync();
+
+        var sut = CreateSut(db, new FakeMusicBrainz(), new FakeIdentityDiscogsClient { IsAuthenticated = false });
+
+        var view = await sut.ResolveArtistAsync(owner, "Various Artists", runId: null, dryRun: false);
+
+        Assert.Null(view.Accepted);
+        Assert.Empty(view.Candidates);
+    }
+
+    [Fact]
     public async Task ResolveArtist_AgreeingMbids_AutoAccepts()
     {
         await using var db = NewDb();
@@ -319,7 +415,9 @@ public class CatalogIdentityHardeningTests
         string? releaseMbid = null,
         string? upc = null,
         string? label = null,
-        string? catno = null)
+        string? catno = null,
+        long? discogsArtistId = null,
+        long? discogsReleaseId = null)
     {
         var song = new SongMetadata
         {
@@ -341,6 +439,8 @@ public class CatalogIdentityHardeningTests
             Upc = upc,
             Label = label,
             CatalogNumber = catno,
+            DiscogsArtistId = discogsArtistId,
+            DiscogsReleaseId = discogsReleaseId,
             EnrichmentStatus = EnrichmentStatus.Matched,
         };
         db.Songs.Add(song);

@@ -33,7 +33,7 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, identity, new RecordingFetcher(), new SequenceImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        await sut.RunBatchAsync(run.Id, batchSize: 10);
+        await sut.RunBatchAsync(owner, run.Id, batchSize: 10);
 
         await using var fresh = NewDb(name);
         var stored = await fresh.CatalogBackfillRuns.IgnoreQueryFilters().SingleAsync();
@@ -57,7 +57,7 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, identity, new RecordingFetcher(), new SequenceImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        await sut.RunBatchAsync(run.Id, batchSize: 10);
+        await sut.RunBatchAsync(owner, run.Id, batchSize: 10);
 
         await using var fresh = NewDb(name);
         var stored = await fresh.CatalogBackfillRuns.IgnoreQueryFilters().SingleAsync();
@@ -87,7 +87,7 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, identity, fetcher, new SequenceImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        var done = await sut.RunBatchAsync(run.Id, batchSize: 10);
+        var done = await sut.RunBatchAsync(owner, run.Id, batchSize: 10);
 
         Assert.Equal(1, done.Linked);
         Assert.Equal(2, done.SongsUpdated);
@@ -118,6 +118,25 @@ public class CatalogBackfillRobustnessTests
     }
 
     [Fact]
+    public async Task RunBatch_RejectsAnotherOwnersRun()
+    {
+        await using var db = NewDb(Guid.NewGuid().ToString("N"));
+        var owner = TestUsers.OwnerId;
+        AddSong(db, owner, "Alpha", "A1", "t1");
+        await db.SaveChangesAsync();
+        var sut = new CatalogBackfillService(
+            db, new ClearingIdentity(db), new RecordingFetcher(), new SequenceImages(), new FakeIdentityDiscogsClient());
+        var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: true, "admin");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.RunBatchAsync(TestUsers.FriendId, run.Id, batchSize: 10));
+
+        var stored = await db.CatalogBackfillRuns.IgnoreQueryFilters().AsNoTracking().SingleAsync();
+        Assert.Equal(0, stored.Processed);
+        Assert.Equal(CatalogBackfillStatus.Running, stored.Status);
+    }
+
+    [Fact]
     public async Task Worker_AdvancesRunningRuns_AndResumesAutoPausedRunsOlderThanTheInterval()
     {
         var name = Guid.NewGuid().ToString("N");
@@ -129,6 +148,7 @@ public class CatalogBackfillRobustnessTests
         {
             running = AddRun(db, CatalogBackfillStatus.Running, null, now);
             autoPausedOld = AddRun(db, CatalogBackfillStatus.Paused, "429", old);
+            AddRun(db, CatalogBackfillStatus.Paused, "Rate limited. Retry after 7200s.", old);
             AddRun(db, CatalogBackfillStatus.Paused, "429", now - TimeSpan.FromMinutes(5));
             AddRun(db, CatalogBackfillStatus.Paused, null, old);
             AddRun(db, CatalogBackfillStatus.Completed, "x", old);
@@ -167,15 +187,15 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, new ClearingIdentity(db), fetcher, new SequenceImages(), new FakeIdentityDiscogsClient());
         var run = await sut.StartAsync(TestUsers.OwnerId, CatalogBackfillKind.CatalogResources, dryRun: false, "admin");
 
-        var first = await sut.RunBatchAsync(run.Id, batchSize: 2);
+        var first = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 2);
         Assert.Equal("r:200", first.Cursor);
         Assert.Equal(nameof(CatalogBackfillStatus.Running), first.Status);
 
-        var second = await sut.RunBatchAsync(run.Id, batchSize: 2);
+        var second = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 2);
         Assert.Equal("a:50", second.Cursor);
         Assert.Equal(nameof(CatalogBackfillStatus.Running), second.Status);
 
-        var third = await sut.RunBatchAsync(run.Id, batchSize: 2);
+        var third = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 2);
         Assert.Equal("a:150", third.Cursor);
         Assert.Equal(nameof(CatalogBackfillStatus.Completed), third.Status);
 
@@ -206,7 +226,7 @@ public class CatalogBackfillRobustnessTests
 
         var fetcher = new RecordingFetcher();
         var sut = new CatalogBackfillService(db, new ClearingIdentity(db), fetcher, new SequenceImages(), new FakeIdentityDiscogsClient());
-        var done = await sut.RunBatchAsync(runId, batchSize: 10);
+        var done = await sut.RunBatchAsync(TestUsers.OwnerId, runId, batchSize: 10);
 
         Assert.Equal([300L], fetcher.Releases);
         Assert.Equal([5L], fetcher.Artists);
@@ -222,11 +242,11 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, new ClearingIdentity(db), new RecordingFetcher(), images, new FakeIdentityDiscogsClient());
         var run = await sut.StartAsync(TestUsers.OwnerId, CatalogBackfillKind.Images, dryRun: false, "admin");
 
-        var partial = await sut.RunBatchAsync(run.Id, batchSize: 5);
+        var partial = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 5);
         Assert.Equal(nameof(CatalogBackfillStatus.Running), partial.Status);
         Assert.Equal(2, partial.Processed);
 
-        var done = await sut.RunBatchAsync(run.Id, batchSize: 5);
+        var done = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 5);
         Assert.Equal(nameof(CatalogBackfillStatus.Completed), done.Status);
         Assert.Equal(2, done.Processed);
     }
@@ -239,7 +259,7 @@ public class CatalogBackfillRobustnessTests
         var sut = new CatalogBackfillService(db, new ClearingIdentity(db), new RecordingFetcher(), images, new FakeIdentityDiscogsClient());
         var run = await sut.StartAsync(TestUsers.OwnerId, CatalogBackfillKind.Images, dryRun: false, "admin");
 
-        var paused = await sut.RunBatchAsync(run.Id, batchSize: 5);
+        var paused = await sut.RunBatchAsync(TestUsers.OwnerId, run.Id, batchSize: 5);
 
         Assert.Equal(nameof(CatalogBackfillStatus.Paused), paused.Status);
         Assert.False(string.IsNullOrWhiteSpace(paused.LastError));
@@ -367,7 +387,7 @@ public class CatalogBackfillRobustnessTests
     {
         public List<(int RunId, int BatchSize)> Calls { get; } = [];
 
-        public Task<CatalogBackfillRunDto> RunBatchAsync(int runId, int batchSize, CancellationToken ct = default)
+        public Task<CatalogBackfillRunDto> RunBatchAsync(Guid ownerId, int runId, int batchSize, CancellationToken ct = default)
         {
             Calls.Add((runId, batchSize));
             return Task.FromResult<CatalogBackfillRunDto>(null!);

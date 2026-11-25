@@ -16,36 +16,120 @@ public class TagLibLibraryTagWriterTests : IDisposable
 
     private readonly List<string> tempFiles = [];
 
-    [Theory]
-    [InlineData(false, false, true)]
-    [InlineData(true, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(false, false, false)]
-    public async Task DiscogsTagsRespectReleaseIdentityAndCompilationScope(
-        bool localCompilation, bool catalogCompilation, bool matches)
+    [Fact]
+    public async Task DiscogsMatch_WritesIdsAndMergesGenresIntoFileOnly()
     {
         var path = CopyFixture("silence.flac");
         var song = BasicSong();
         song.Genre = "Electronic; Ambient";
-        song.IsCompilation = localCompilation;
         song.EnrichmentStatus = EnrichmentStatus.Matched;
         var mbid = Guid.NewGuid();
         song.MusicBrainzReleaseId = mbid.ToString();
-        var release = new DiscogsReleaseForTags(123, matches ? song.Album! : "Other edition",
-            [new(song.AlbumArtist!)], ["electronic"], ["Dub Techno"], catalogCompilation ? [new(["Compilation"])] : []);
-        using var cache = new MemoryCache(new MemoryCacheOptions());
-        cache.Set($"discogs-release:{mbid:D}", release);
-        var lookup = new DiscogsGenreLookup(null!, null!, cache, NullLogger<DiscogsGenreLookup>.Instance);
-        var writer = new TagLibLibraryTagWriter(lookup);
+        var writer = new TagLibLibraryTagWriter(CachedLookup(mbid, new DiscogsReleaseForTags(
+            123, song.Album!, [new(song.AlbumArtist!)], ["electronic"], ["Dub Techno"], [])));
+
         await writer.WriteTagsAsync(path, song, Identity(song));
         await writer.WriteTagsAsync(path, song, Identity(song));
 
         using var file = TagLib.File.Create(path);
         var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
-        Assert.Equal(matches ? new[] { "123" } : [], xiph.GetField("DISCOGS_RELEASE_ID"));
-        Assert.Equal(matches ? new[] { "Dub Techno" } : [], xiph.GetField("DISCOGS_ALBUM_STYLE"));
-        Assert.Equal(matches && !localCompilation && !catalogCompilation
-            ? new[] { "Electronic", "Ambient", "Dub Techno" } : ["Electronic", "Ambient"], file.Tag.Genres);
+        Assert.Equal(["123"], xiph.GetField("DISCOGS_RELEASE_ID"));
+        Assert.Equal(["electronic"], xiph.GetField("DISCOGS_ALBUM_GENRE"));
+        Assert.Equal(["Dub Techno"], xiph.GetField("DISCOGS_ALBUM_STYLE"));
+        Assert.Equal(["Electronic", "Ambient", "Dub Techno"], file.Tag.Genres);
+        Assert.Equal("Electronic; Ambient", song.Genre);
+    }
+
+    [Fact]
+    public async Task DiscogsMismatch_WritesNothingAndClearsStaleTags()
+    {
+        var path = CopyFixture("silence.flac");
+        var song = BasicSong();
+        song.Genre = "Electronic; Ambient";
+        song.EnrichmentStatus = EnrichmentStatus.Matched;
+        var mbid = Guid.NewGuid();
+        song.MusicBrainzReleaseId = mbid.ToString();
+
+        // Seed stale Discogs tags from a previous match, then rewrite with a mismatched release.
+        using (var seed = TagLib.File.Create(path))
+        {
+            var seedXiph = (TagLib.Ogg.XiphComment)seed.GetTag(TagLib.TagTypes.Xiph, true);
+            seedXiph.SetField("DISCOGS_RELEASE_ID", "999");
+            seedXiph.SetField("DISCOGS_ALBUM_GENRE", "Techno");
+            seedXiph.SetField("DISCOGS_ALBUM_STYLE", "Minimal");
+            seed.Save();
+        }
+
+        var writer = new TagLibLibraryTagWriter(CachedLookup(mbid, new DiscogsReleaseForTags(
+            123, "Other edition", [new(song.AlbumArtist!)], ["electronic"], ["Dub Techno"], [])));
+        await writer.WriteTagsAsync(path, song, Identity(song));
+
+        using var file = TagLib.File.Create(path);
+        var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
+        Assert.Empty(xiph.GetField("DISCOGS_RELEASE_ID"));
+        Assert.Empty(xiph.GetField("DISCOGS_ALBUM_GENRE"));
+        Assert.Empty(xiph.GetField("DISCOGS_ALBUM_STYLE"));
+        Assert.Equal(["Electronic", "Ambient"], file.Tag.Genres);
+        Assert.Equal("Electronic; Ambient", song.Genre);
+    }
+
+    [Fact]
+    public async Task DiscogsCompilation_WritesIdsButDoesNotMergeGenres()
+    {
+        var path = CopyFixture("silence.flac");
+        var song = BasicSong();
+        song.Genre = "Electronic; Ambient";
+        song.IsCompilation = true;
+        song.EnrichmentStatus = EnrichmentStatus.Matched;
+        var mbid = Guid.NewGuid();
+        song.MusicBrainzReleaseId = mbid.ToString();
+        var writer = new TagLibLibraryTagWriter(CachedLookup(mbid, new DiscogsReleaseForTags(
+            123, song.Album!, [new("Various")], ["electronic"], ["Dub Techno"], [new(["Compilation"])])));
+
+        await writer.WriteTagsAsync(path, song, Identity(song));
+
+        using var file = TagLib.File.Create(path);
+        var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
+        Assert.Equal(["123"], xiph.GetField("DISCOGS_RELEASE_ID"));
+        Assert.Equal(["electronic"], xiph.GetField("DISCOGS_ALBUM_GENRE"));
+        Assert.Equal(["Dub Techno"], xiph.GetField("DISCOGS_ALBUM_STYLE"));
+        Assert.Equal(["Electronic", "Ambient"], file.Tag.Genres);
+        Assert.Equal("Electronic; Ambient", song.Genre);
+    }
+
+    [Fact]
+    public async Task DiscogsNullRelease_ClearsStaleTags()
+    {
+        var path = CopyFixture("silence.flac");
+        var song = BasicSong();
+        song.EnrichmentStatus = EnrichmentStatus.Matched;
+        var mbid = Guid.NewGuid();
+        song.MusicBrainzReleaseId = mbid.ToString();
+
+        using (var seed = TagLib.File.Create(path))
+        {
+            var seedXiph = (TagLib.Ogg.XiphComment)seed.GetTag(TagLib.TagTypes.Xiph, true);
+            seedXiph.SetField("DISCOGS_RELEASE_ID", "999");
+            seedXiph.SetField("DISCOGS_ALBUM_GENRE", "Techno");
+            seedXiph.SetField("DISCOGS_ALBUM_STYLE", "Minimal");
+            seed.Save();
+        }
+
+        // No Discogs lookup — release stays null, so the writer must clear the stale fields.
+        await new TagLibLibraryTagWriter().WriteTagsAsync(path, song, Identity(song));
+
+        using var file = TagLib.File.Create(path);
+        var xiph = (TagLib.Ogg.XiphComment)file.GetTag(TagLib.TagTypes.Xiph);
+        Assert.Empty(xiph.GetField("DISCOGS_RELEASE_ID"));
+        Assert.Empty(xiph.GetField("DISCOGS_ALBUM_GENRE"));
+        Assert.Empty(xiph.GetField("DISCOGS_ALBUM_STYLE"));
+    }
+
+    private static DiscogsGenreLookup CachedLookup(Guid mbid, DiscogsReleaseForTags release)
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        cache.Set($"discogs-release:{mbid:D}", new DiscogsGenreLookup.CacheEntry(release));
+        return new DiscogsGenreLookup(null!, null!, cache, NullLogger<DiscogsGenreLookup>.Instance, TimeProvider.System);
     }
 
     [Fact]

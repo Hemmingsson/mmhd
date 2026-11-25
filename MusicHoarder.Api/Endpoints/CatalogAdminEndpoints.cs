@@ -190,7 +190,7 @@ public static class CatalogAdminEndpoints
 
         try
         {
-            var run = await backfill.RunBatchAsync(id, batchSize ?? 50, ct);
+            var run = await backfill.RunBatchAsync(currentUser.UserId, id, batchSize ?? 50, ct);
             return TypedResults.Ok(run);
         }
         catch (InvalidOperationException)

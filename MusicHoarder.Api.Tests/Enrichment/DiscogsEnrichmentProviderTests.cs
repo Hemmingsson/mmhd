@@ -109,6 +109,62 @@ public class DiscogsEnrichmentProviderTests
     }
 
     [Fact]
+    public void ToResult_PrefersLibraryAlbumArtistOverFeaturedReleaseCredit()
+    {
+        var song = Song();
+        song.AlbumArtist = "Main Artist";
+        var release = new DiscogsRelease(
+            900,
+            "Album",
+            Artists:
+            [
+                new DiscogsArtistRef(901, "Guest Artist"),
+                new DiscogsArtistRef(902, "Main Artist"),
+            ],
+            Tracklist: [new DiscogsTrack("1", "track", "Xtal")]);
+        var match = new DiscogsAlbumMatch(
+            new DiscogsDocument<DiscogsRelease>(release, "{}"),
+            null,
+            0.9,
+            "test",
+            EditionExact: false);
+
+        var result = DiscogsEnrichmentProvider.ToResult(song, match);
+
+        Assert.Equal("Main Artist", result.AlbumArtist);
+        Assert.Equal(902, result.DiscogsArtistId);
+    }
+
+    [Fact]
+    public void ToResult_KeepsVariousArtistsAsAlbumArtist()
+    {
+        var song = Song();
+        song.Artist = "Autechre";
+        song.AlbumArtist = "Various Artists";
+        var release = new DiscogsRelease(
+            903,
+            "Compilation",
+            Artists:
+            [
+                new DiscogsArtistRef(DiscogsReleaseMatcher.VariousArtistsId, "Various"),
+                new DiscogsArtistRef(904, "Autechre"),
+            ],
+            Tracklist: [new DiscogsTrack("1", "track", "Xtal")]);
+        var match = new DiscogsAlbumMatch(
+            new DiscogsDocument<DiscogsRelease>(release, "{}"),
+            null,
+            0.9,
+            "test",
+            EditionExact: false);
+
+        var result = DiscogsEnrichmentProvider.ToResult(song, match);
+
+        Assert.Equal("Autechre", result.Artist);
+        Assert.Equal("Various Artists", result.AlbumArtist);
+        Assert.Equal(DiscogsReleaseMatcher.VariousArtistsId, result.DiscogsArtistId);
+    }
+
+    [Fact]
     public async Task RateLimit_IsReportedAsRateLimited()
     {
         var client = new FixtureDiscogsClient { RateLimited = true };

@@ -163,7 +163,7 @@ public static class AlbumsEndpoints
                 EnrichmentStatus = unreleased ? s.EnrichmentStatus : default,
                 MatchedBy = unreleased ? s.MatchedBy : null,
                 MatchWarnings = unreleased ? s.MatchWarnings : null,
-                s.AcquiredAtUtc, s.LibraryBuiltAtUtc, s.IndexedAtUtc,
+                s.AcquiredAtUtc, s.LibraryBuiltAtUtc, s.IndexedAtUtc, s.IsCompilation,
             })
             .ToListAsync(ct);
 
@@ -206,7 +206,7 @@ public static class AlbumsEndpoints
                 IsBuilt: s.LibraryBuildStatus == LibraryBuildStatus.Done && s.DestinationPath != null,
                 IsUnreleased: isUnreleased,
                 SpotifyAddedAtUtc: saveDates.SaveDateFor(s.Id, s.SpotifyId, saveDates.LinkFor(s.Id)?.SpotifyAddedAtUtc),
-                s.AcquiredAtUtc, s.LibraryBuiltAtUtc, s.IndexedAtUtc);
+                s.AcquiredAtUtc, s.LibraryBuiltAtUtc, s.IndexedAtUtc, s.IsCompilation);
         }).ToList();
     }
 
@@ -225,7 +225,9 @@ public static class AlbumsEndpoints
         IsAlbumFill: false, row.IsBuilt, IsUnreleased: false, SpotifyAddedAtUtc: null,
         // The shared row's acquisition date already falls back to its index time, so the index
         // stamp AddedAt would fall back to is never read; it is given the same value.
-        row.AcquiredAtUtc, LibraryBuiltAtUtc: null, IndexedAtUtc: row.AcquiredAtUtc);
+        row.AcquiredAtUtc, LibraryBuiltAtUtc: null, IndexedAtUtc: row.AcquiredAtUtc,
+        // Shared rows withhold pipeline flags; without IsCompilation they never fold as comps.
+        IsCompilation: false);
 
     /// <summary>
     /// The optional narrowing, applied to the songs before they are grouped rather than to the cards

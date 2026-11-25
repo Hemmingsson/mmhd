@@ -1,0 +1,3 @@
+ARG RUNTIME_IMAGE=local/mmhd-runtime:arm64
+FROM ${RUNTIME_IMAGE}
+COPY publish/ /app/

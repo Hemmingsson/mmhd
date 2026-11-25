@@ -85,7 +85,7 @@ public interface ICatalogBackfillService
     Task<CatalogBackfillRunDto> StartAsync(Guid ownerId, CatalogBackfillKind kind, bool dryRun, string startedBy, CancellationToken ct = default);
 
     /// <summary>Works one batch of a run from its cursor; pauses on a rate limit or the batch budget.</summary>
-    Task<CatalogBackfillRunDto> RunBatchAsync(int runId, int batchSize, CancellationToken ct = default);
+    Task<CatalogBackfillRunDto> RunBatchAsync(Guid ownerId, int runId, int batchSize, CancellationToken ct = default);
 
     /// <summary>Reverts the run's decisions and song changes. Idempotent.</summary>
     Task<CatalogBackfillRunDto?> RollbackAsync(Guid ownerId, int runId, CancellationToken ct = default);

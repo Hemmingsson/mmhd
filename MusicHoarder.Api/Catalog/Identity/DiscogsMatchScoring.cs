@@ -140,32 +140,53 @@ public static partial class DiscogsMatchScoring
     }
 
     /// <summary>Score a search hit when the full release is not yet loaded (weaker evidence).</summary>
-    public static double ScoreSearchHit(LibraryAlbumHint library, DiscogsSearchResult hit)
+    public static double ScoreSearchHit(
+        LibraryAlbumHint library,
+        DiscogsSearchResult hit,
+        bool requireBarcode = false,
+        bool requireCatalogNumber = false)
     {
         var (_, albumPart) = SplitSearchTitle(hit.Title);
         if (!TitlesEqual(library.Album, albumPart))
             return 0;
 
+        var barcodeMatches = CatalogKeys.IsUsableBarcode(library.Barcode)
+            && hit.Barcode is { Count: > 0 }
+            && hit.Barcode.Any(b => CatalogKeys.IsUsableBarcode(b)
+                && NormalizeBarcode(b) == NormalizeBarcode(library.Barcode));
+        var catalogNumberMatches = !string.IsNullOrWhiteSpace(library.CatalogNumber)
+            && !string.IsNullOrWhiteSpace(hit.Catno)
+            && CatalogKeys.NameKey(hit.Catno) == CatalogKeys.NameKey(library.CatalogNumber);
+
+        // A fuzzy identifier search only earns its confidence floor when the hit carries the identifier.
+        if ((requireBarcode && !barcodeMatches) || (requireCatalogNumber && !catalogNumberMatches))
+            return 0;
+
         var score = 0.40;
         if (library.Year is int year && hit.Year == year)
             score += 0.05;
-
-        if (CatalogKeys.IsUsableBarcode(library.Barcode)
-            && hit.Barcode is { Count: > 0 }
-            && hit.Barcode.Any(b => CatalogKeys.IsUsableBarcode(b) && NormalizeBarcode(b) == NormalizeBarcode(library.Barcode)))
-        {
+        if (barcodeMatches)
             score += 0.35;
-        }
-
-        if (!string.IsNullOrWhiteSpace(library.CatalogNumber)
-            && !string.IsNullOrWhiteSpace(hit.Catno)
-            && CatalogKeys.NameKey(hit.Catno) == CatalogKeys.NameKey(library.CatalogNumber))
-        {
+        if (catalogNumberMatches)
             score += 0.20;
-        }
 
         return Math.Clamp(score, 0, 1);
     }
+
+    public static bool SearchHitBarcodeMatches(LibraryAlbumHint library, DiscogsSearchResult hit) =>
+        CatalogKeys.IsUsableBarcode(library.Barcode)
+        && hit.Barcode is { Count: > 0 }
+        && hit.Barcode.Any(b =>
+            CatalogKeys.IsUsableBarcode(b)
+            && NormalizeBarcode(b) == NormalizeBarcode(library.Barcode));
+
+    public static bool SearchHitCatalogNumberMatches(LibraryAlbumHint library, DiscogsSearchResult hit) =>
+        !string.IsNullOrWhiteSpace(library.CatalogNumber)
+        && !string.IsNullOrWhiteSpace(hit.Catno)
+        && CatalogKeys.NameKey(hit.Catno) == CatalogKeys.NameKey(library.CatalogNumber)
+        && !string.IsNullOrWhiteSpace(library.Label)
+        && hit.Label is { Count: > 0 }
+        && hit.Label.Any(label => CatalogKeys.NameKey(label) == CatalogKeys.NameKey(library.Label));
 
     /// <summary>
     /// Splits a Discogs search title, usually "Artist - Album", into its parts. Artist is null when

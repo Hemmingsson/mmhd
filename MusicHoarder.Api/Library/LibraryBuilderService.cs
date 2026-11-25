@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Abstractions;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -5,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Artwork;
 using MusicHoarder.Api.Auth;
+using MusicHoarder.Api.Metadata;
 using MusicHoarder.Api.Options;
 using MusicHoarder.Api.Persistence;
 using MusicHoarder.Api.Scanner;
@@ -101,15 +103,15 @@ public class TagLibLibraryTagWriter(DiscogsGenreLookup? discogs = null) : ILibra
         // Descriptive metadata the generic Tag exposes natively (writes the correct per-format frame:
         // GENRE/TCON/©gen, COMPOSER/TCOM/©wrt, COPYRIGHT/TCOP/cprt, ARTISTSORT/TSOP/soar,
         // ALBUMARTISTSORT/TSO2/soaa). Multi-values become real repeated frames; empty clears the frame.
-        if (release is not null && !compilation && !release.Compilation)
-        {
-            song.CaptureOriginalMetadata();
-            song.Genre = MusicHoarder.Api.Metadata.MultiValue.Join(
-                MusicHoarder.Api.Metadata.MultiValue.Split(song.Genre).Concat(tag.Genres)
-                    .Concat(release.Genres).Concat(release.Styles).Distinct(StringComparer.OrdinalIgnoreCase));
-        }
-        tag.Genres = MusicHoarder.Api.Metadata.MultiValue.Split(song.Genre);
-        tag.Composers = MusicHoarder.Api.Metadata.MultiValue.Split(song.Composer);
+        // Discogs genres land in the file only — never mutate song.Genre (that would persist to the DB).
+        tag.Genres = release is not null && !compilation && !release.Compilation
+            ? MultiValue.Split(song.Genre)
+                .Concat(release.Genres)
+                .Concat(release.Styles)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
+            : MultiValue.Split(song.Genre);
+        tag.Composers = MultiValue.Split(song.Composer);
         tag.Copyright = NullIfEmpty(song.Copyright);
         // Sort names align positionally with the single-value display ARTIST / the album artist.
         tag.PerformersSort = NullIfEmpty(song.ArtistSort) is string artistSort ? [artistSort] : [];
@@ -131,18 +133,17 @@ public class TagLibLibraryTagWriter(DiscogsGenreLookup? discogs = null) : ILibra
         // ID3 tag on a FLAC, which is non-spec and breaks some players.
         WriteExtendedTags(tagFile, song, albumIdentity, albumArtists, compilation);
 
-        if (release is not null)
+        // Always rewrite Discogs album fields so a rebuild with no matching release clears stale tags.
+        void AlbumField(string name, string[] values)
         {
-            void AlbumField(string name, string[] values)
-            {
-                if (tagFile.GetTag(TagLib.TagTypes.Xiph, false) is TagLib.Ogg.XiphComment xiph) SetXiph(xiph, name, values);
-                if (tagFile.GetTag(TagLib.TagTypes.Id3v2, false) is TagLib.Id3v2.Tag id3) SetId3UserText(id3, name, values);
-                if (tagFile.GetTag(TagLib.TagTypes.Apple, false) is TagLib.Mpeg4.AppleTag apple) SetDash(apple, name, values);
-            }
-            AlbumField("DISCOGS_RELEASE_ID", [release.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
-            AlbumField("DISCOGS_ALBUM_GENRE", release.Genres);
-            AlbumField("DISCOGS_ALBUM_STYLE", release.Styles);
+            if (tagFile.GetTag(TagLib.TagTypes.Xiph, false) is TagLib.Ogg.XiphComment xiph) SetXiph(xiph, name, values);
+            if (tagFile.GetTag(TagLib.TagTypes.Id3v2, false) is TagLib.Id3v2.Tag id3) SetId3UserText(id3, name, values);
+            if (tagFile.GetTag(TagLib.TagTypes.Apple, false) is TagLib.Mpeg4.AppleTag apple) SetDash(apple, name, values);
         }
+        AlbumField("DISCOGS_RELEASE_ID",
+            release is not null ? [release.Id.ToString(CultureInfo.InvariantCulture)] : []);
+        AlbumField("DISCOGS_ALBUM_GENRE", release?.Genres ?? []);
+        AlbumField("DISCOGS_ALBUM_STYLE", release?.Styles ?? []);
         tagFile.Save();
     }
 

@@ -136,7 +136,7 @@ public class SpotifyApiServiceTests
                     name = "My Playlist",
                     description = "A great playlist",
                     images = new[] { new { url = "https://img.spotify.com/pl1.jpg" } },
-                    tracks = new { total = 42 },
+                    items = new { total = 42 },
                     owner = new { display_name = "TestUser" }
                 },
                 new
@@ -145,7 +145,7 @@ public class SpotifyApiServiceTests
                     name = "Another Playlist",
                     description = "",
                     images = Array.Empty<object>(),
-                    tracks = new { total = 10 },
+                    items = new { total = 10 },
                     owner = new { display_name = "OtherUser" }
                 }
             },
@@ -178,7 +178,7 @@ public class SpotifyApiServiceTests
 
         var spotifyResponse = new
         {
-            items = new[] { new { id = "p1", name = "Cached", description = "", images = Array.Empty<object>(), tracks = new { total = 5 }, owner = new { display_name = "Me" } } },
+            items = new[] { new { id = "p1", name = "Cached", description = "", images = Array.Empty<object>(), items = new { total = 5 }, owner = new { display_name = "Me" } } },
             next = (string?)null
         };
 
@@ -201,13 +201,13 @@ public class SpotifyApiServiceTests
 
         var page1 = JsonSerializer.Serialize(new
         {
-            items = new[] { new { id = "p1", name = "Playlist 1", description = "", images = Array.Empty<object>(), tracks = new { total = 5 }, owner = new { display_name = "Me" } } },
+            items = new[] { new { id = "p1", name = "Playlist 1", description = "", images = Array.Empty<object>(), items = new { total = 5 }, owner = new { display_name = "Me" } } },
             next = "https://api.spotify.com/v1/me/playlists?offset=50&limit=50"
         });
 
         var page2 = JsonSerializer.Serialize(new
         {
-            items = new[] { new { id = "p2", name = "Playlist 2", description = "", images = Array.Empty<object>(), tracks = new { total = 10 }, owner = new { display_name = "Me" } } },
+            items = new[] { new { id = "p2", name = "Playlist 2", description = "", images = Array.Empty<object>(), items = new { total = 10 }, owner = new { display_name = "Me" } } },
             next = (string?)null
         });
 
@@ -298,11 +298,11 @@ public class SpotifyApiServiceTests
             "items": [
                 {
                     "added_at": "2024-01-01T00:00:00Z",
-                    "track": null
+                    "item": null
                 },
                 {
                     "added_at": "2024-01-02T00:00:00Z",
-                    "track": {
+                    "item": {
                         "id": "valid",
                         "name": "Valid Track",
                         "duration_ms": 100000,

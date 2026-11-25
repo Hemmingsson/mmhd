@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Enrichment;
@@ -93,14 +94,13 @@ public class MusicBrainzReleaseLookupTests
     }
 
     [Theory]
-    [InlineData("https://www.discogs.com/release/123-Example", "123")]
-    [InlineData("https://www.discogs.com/master/123", null)]
-    [InlineData("https://example.net/release/123", null)]
-    [InlineData("https://www.discogs.com/release/456", null)]
-    public async Task DiscogsLinkRequiresOneRelease(string url, string? expected)
+    [InlineData("123", "https://www.discogs.com/release/123-Example")]
+    [InlineData(null, "https://www.discogs.com/master/123")]
+    [InlineData(null, "https://example.net/release/123")]
+    [InlineData(null, "https://www.discogs.com/release/456", "https://www.discogs.com/release/123")]
+    public async Task DiscogsLinkRequiresOneRelease(string? expected, params string[] urls)
     {
-        var urls = url.EndsWith("/456") ? new[] { url, "https://www.discogs.com/release/123" } : [url];
-        var json = System.Text.Json.JsonSerializer.Serialize(new
+        var json = JsonSerializer.Serialize(new
         {
             relations = urls.Select(resource => new { type = "discogs", url = new { resource } })
         });

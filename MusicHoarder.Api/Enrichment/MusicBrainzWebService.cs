@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Options;
 using MusicHoarder.Api.RateLimiting;
@@ -101,26 +103,37 @@ public interface IMusicBrainzWebService
 /// is required by MusicBrainz; it is set on the injected <see cref="HttpClient"/>.
 /// Response payloads are turned into domain records by <see cref="MusicBrainzResponseMapper"/>.
 /// </summary>
-public sealed class MusicBrainzWebService(
+public sealed partial class MusicBrainzWebService(
     HttpClient httpClient,
     IOptions<MusicEnricherOptions> options,
     ILogger<MusicBrainzWebService> logger) : IMusicBrainzWebService
 {
     private static readonly ReconfigurableRateLimiter RateLimiter = new();
 
+    [GeneratedRegex(@"^/release/([1-9][0-9]*)(?:-[^/]*)?/?$")]
+    private static partial Regex DiscogsReleasePath();
+
     public async Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct)
     {
-        var data = await GetAsync<System.Text.Json.Nodes.JsonObject>(
-            $"release/{release:D}?inc=url-rels&fmt=json", ct);
-        if (data?["relations"] is not System.Text.Json.Nodes.JsonArray relations) return null;
-        var ids = relations.Where(r => (string?)r?["type"] == "discogs")
-            .Select(r => (string?)r?["url"]?["resource"])
-            .Select(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && uri.Host is "www.discogs.com" or "discogs.com"
-                ? System.Text.RegularExpressions.Regex.Match(uri.AbsolutePath, @"^/release/([1-9][0-9]*)(?:-[^/]*)?/?$").Groups[1].Value
-                : null)
-            .Where(id => !string.IsNullOrEmpty(id)).Distinct().ToArray();
+        var data = await GetAsync<JsonObject>($"release/{release:D}?inc=url-rels&fmt=json", ct);
+        if (data?["relations"] is not JsonArray relations) return null;
+
+        var ids = relations
+            .Where(r => (string?)r?["type"] == "discogs")
+            .Select(r => DiscogsReleaseIdFromUrl((string?)r?["url"]?["resource"]))
+            .OfType<string>()
+            .Distinct()
+            .ToArray();
         return ids.Length == 1 ? ids[0] : null;
+    }
+
+    private static string? DiscogsReleaseIdFromUrl(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || uri.Host is not ("www.discogs.com" or "discogs.com"))
+            return null;
+        var match = DiscogsReleasePath().Match(uri.AbsolutePath);
+        return match.Success ? match.Groups[1].Value : null;
     }
 
     public async Task<MusicBrainzRecording?> LookupByRecordingIdAsync(string mbid, CancellationToken ct = default)

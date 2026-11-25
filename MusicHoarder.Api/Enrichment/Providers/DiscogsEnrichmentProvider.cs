@@ -86,8 +86,12 @@ public sealed class DiscogsEnrichmentProvider(
     {
         var release = match.Release.Value;
         var master = match.Master?.Value;
-        var lead = (release.Artists ?? []).FirstOrDefault(a => a.Id != DiscogsReleaseMatcher.VariousArtistsId);
-        var artist = DiscogsReleaseMatcher.DisplayName(lead?.Name);
+        var isVarious = release.Artists?.Any(a => a.Id == DiscogsReleaseMatcher.VariousArtistsId) == true;
+        var lead = DiscogsReleaseMatcher.AlbumArtist(release.Artists, song.AlbumArtist ?? song.Artist);
+        var artist = isVarious
+            ? song.Artist
+            : DiscogsReleaseMatcher.DisplayName(lead?.Name);
+        var albumArtist = isVarious ? "Various Artists" : artist;
         var label = match.EditionExact ? release.Labels?.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.Name)) : null;
         var catalogNumber = label?.Catno is { } catno && !string.Equals(catno.Trim(), "none", StringComparison.OrdinalIgnoreCase)
             ? catno.Trim()
@@ -111,7 +115,7 @@ public sealed class DiscogsEnrichmentProvider(
 
         return new EnrichmentProviderResult(
             Artist: artist,
-            AlbumArtist: artist,
+            AlbumArtist: albumArtist,
             Title: track?.Title ?? song.Title,
             Year: master?.Year ?? release.Year,
             TrackNumber: null,
@@ -131,7 +135,7 @@ public sealed class DiscogsEnrichmentProvider(
             Upc: barcode,
             DiscogsReleaseId: match.EditionExact ? release.Id : null,
             DiscogsMasterId: release.MasterId,
-            DiscogsArtistId: lead?.Id);
+            DiscogsArtistId: isVarious ? DiscogsReleaseMatcher.VariousArtistsId : lead?.Id);
     }
 
     /// <summary>Best effort: the catalog is a by-product here, never a reason to fail enrichment.</summary>

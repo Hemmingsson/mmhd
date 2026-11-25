@@ -1,0 +1,16 @@
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
+RUN apt-get update && apt-get install -y --no-install-recommends libchromaprint-tools ffmpeg curl unzip ca-certificates && apt-get clean
+RUN set -eu; cd /tmp; \
+    curl -fsSLO https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp_linux_aarch64; \
+    curl -fsSLO https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/SHA2-256SUMS; \
+    grep -E ' [*]?yt-dlp_linux_aarch64$' SHA2-256SUMS | sha256sum -c -; \
+    install -m 755 yt-dlp_linux_aarch64 /usr/local/bin/yt-dlp; \
+    curl -fsSLO https://github.com/denoland/deno/releases/download/v2.9.8/deno-aarch64-unknown-linux-gnu.zip; \
+    curl -fsSLO https://github.com/denoland/deno/releases/download/v2.9.8/deno-aarch64-unknown-linux-gnu.zip.sha256sum; \
+    sha256sum -c deno-aarch64-unknown-linux-gnu.zip.sha256sum; \
+    unzip -oq deno-aarch64-unknown-linux-gnu.zip -d /usr/local/bin
+WORKDIR /app
+COPY docker/api-entrypoint.sh /usr/local/bin/mh-entrypoint
+RUN chmod 755 /usr/local/bin/mh-entrypoint
+ENV ASPNETCORE_URLS=http://+:8080 ASPNETCORE_ENVIRONMENT=Production
+ENTRYPOINT ["/usr/local/bin/mh-entrypoint", "dotnet", "MusicHoarder.Api.dll"]

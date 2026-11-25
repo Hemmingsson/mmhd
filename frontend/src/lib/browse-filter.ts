@@ -1,13 +1,14 @@
 /**
  * Orthogonal "Organize by" filter applied to the library on top of section filters.
  *
- * Artist/year index grids link into the library at `/library?artist=<name>` /
- * `/library?year=<n>` (`?year=unknown` for the no-year bucket). `LibraryV2` parses
- * the URL with `parseBrowseFilter` and narrows `fetchSongs()` with `applyBrowseFilter`
- * before its usual album grouping.
+ * Artist/year/label index grids link into the library at `/library?artist=<name>` /
+ * `/library?year=<n>` / `/library?label=<name>` (`?year=unknown` for the no-year bucket).
+ * `LibraryV2` parses the URL with `parseBrowseFilter` and narrows `fetchSongs()` with
+ * `applyBrowseFilter` before its usual album grouping.
  */
 import type { ReadonlyURLSearchParams } from '$app/state';
 import { discreteArtistsForSong, UNKNOWN_GROUP, type ApiSong } from '#lib/api-client.ts';
+import { recordLabels } from '#lib/library/labels.ts';
 
 const UNKNOWN_ARTIST = 'Unknown Artist';
 const UNKNOWN_YEAR_PARAM = UNKNOWN_GROUP.toLowerCase(); // "unknown"
@@ -23,6 +24,11 @@ export interface BrowseFilter {
   year?: number;
   /** True when the year param was the "unknown" bucket (songs with no year). */
   yearUnknown?: boolean;
+  /**
+   * Match any `recordLabels()` credit on the song's label, case-insensitive — so a multi-label
+   * track is reachable from each label the Labels index lists it under.
+   */
+  label?: string;
 }
 
 function songArtist(song: ApiSong): string {
@@ -33,6 +39,10 @@ export function parseBrowseFilter(params: ReadonlyURLSearchParams): BrowseFilter
   const artist = params.get('artist');
   if (artist != null && artist.trim().length > 0) {
     return { artist: artist.trim() };
+  }
+  const label = params.get('label');
+  if (label != null && label.trim().length > 0) {
+    return { label: label.trim() };
   }
   const year = params.get('year');
   if (year != null && year.trim().length > 0) {
@@ -55,6 +65,10 @@ export function applyBrowseFilter(songs: ApiSong[], filter: BrowseFilter | null)
         discreteArtistsForSong(s).some((name) => name.toLowerCase() === target)
     );
   }
+  if (filter.label != null) {
+    const target = filter.label.toLowerCase();
+    return songs.filter((s) => recordLabels(s.label).some((name) => name.toLowerCase() === target));
+  }
   if (filter.yearUnknown) {
     return songs.filter((s) => typeof s.year !== 'number' || !Number.isFinite(s.year));
   }
@@ -66,6 +80,7 @@ export function applyBrowseFilter(songs: ApiSong[], filter: BrowseFilter | null)
 
 export function browseFilterLabel(filter: BrowseFilter): string {
   if (filter.artist != null) return filter.artist;
+  if (filter.label != null) return filter.label;
   if (filter.yearUnknown) return UNKNOWN_GROUP;
   if (filter.year != null) return String(filter.year);
   return '';

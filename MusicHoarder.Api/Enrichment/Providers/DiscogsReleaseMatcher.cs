@@ -154,6 +154,21 @@ public sealed partial class DiscogsReleaseMatcher(
     public static string? DisplayName(string? name)
         => string.IsNullOrWhiteSpace(name) ? name : Disambiguator().Replace(name.Trim(), string.Empty).TrimEnd('*').Trim();
 
+    /// <summary>
+    /// Selects the release artist that represents the library album artist. A compilation has no
+    /// single performer to promote to album artist, even when its release credits list performers.
+    /// </summary>
+    public static DiscogsArtistRef? AlbumArtist(
+        IReadOnlyList<DiscogsArtistRef>? artists, string? libraryAlbumArtist)
+    {
+        if (artists is null or { Count: 0 } || artists.Any(a => a.Id == VariousArtistsId))
+            return null;
+
+        var key = ArtistKey(libraryAlbumArtist);
+        return artists.FirstOrDefault(a => ArtistKey(a.Name) == key)
+            ?? artists.FirstOrDefault(a => a.Id != VariousArtistsId);
+    }
+
     /// <summary>The digits of a barcode worth searching for; Discogs and tags both carry "none" and junk.</summary>
     public static string? UsableBarcode(string? value)
     {

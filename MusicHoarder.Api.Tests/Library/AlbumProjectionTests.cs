@@ -336,6 +336,35 @@ public class AlbumProjectionTests
         Assert.Equal([4, 3, 2, 1], album.TrackIds);
     }
 
+    [Fact]
+    public void Merges_compilation_folders_with_one_release_id()
+    {
+        var album = Assert.Single(Merge(
+            Song(id: 1, artist: "A", albumArtist: "A", album: "Compilation",
+                destinationPath: "/dest/A/Compilation/01.flac", trackNumber: 1,
+                musicBrainzReleaseId: "release", isCompilation: true),
+            Song(id: 2, artist: "B", albumArtist: "B", album: "Compilation",
+                destinationPath: "/dest/B/Compilation/02.flac", trackNumber: 2,
+                musicBrainzReleaseId: "release", isCompilation: true)));
+
+        Assert.Equal("Various Artists", album.Artist);
+        Assert.Equal([1, 2], album.TrackIds);
+        Assert.Equal(2, album.FolderKeys.Count);
+    }
+
+    [Fact]
+    public void Merges_split_ep_with_joint_credit_and_non_overlapping_track_numbers()
+    {
+        var album = Assert.Single(Merge(
+            Song(id: 1, artist: "A", albumArtist: "A", album: "Split", year: 2021,
+                destinationPath: "/dest/A/Split/01.flac", trackNumber: 1, musicBrainzReleaseId: "release"),
+            Song(id: 2, artist: "B", albumArtist: "A / B", album: "Split", year: 2021,
+                destinationPath: "/dest/A B/Split/02.flac", trackNumber: 2)));
+
+        Assert.Equal("A / B", album.Artist);
+        Assert.Equal([1, 2], album.TrackIds);
+    }
+
     // ── fixtures ──────────────────────────────────────────────────────────────
 
     private static List<AlbumSummaryDto> Group(params AlbumTrackRow[] rows) =>
@@ -379,10 +408,11 @@ public class AlbumProjectionTests
         DateTime? spotifyAddedAtUtc = null,
         DateTime? acquiredAtUtc = null,
         DateTime? libraryBuiltAtUtc = null,
-        DateTime? indexedAtUtc = null) =>
+        DateTime? indexedAtUtc = null,
+        bool isCompilation = false) =>
         new(id, fileName, destinationPath, album, albumArtist, artist, artists, title, trackNumber,
             year, durationSeconds, fileSizeBytes, genre, label, catalogNumber, upc, releaseDate,
             musicBrainzReleaseId, hasCoverArt, playCount, likedAtUtc, isAlbumFill, isBuilt,
             isUnreleased, spotifyAddedAtUtc, acquiredAtUtc, libraryBuiltAtUtc,
-            indexedAtUtc ?? new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc));
+            indexedAtUtc ?? new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc), isCompilation);
 }

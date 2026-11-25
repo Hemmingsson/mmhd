@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Enrichment;
+using MusicHoarder.Api.Enrichment.Providers;
+using MusicHoarder.Api.Library;
 using MusicHoarder.Api.Metadata;
 using MusicHoarder.Api.Options;
 using MusicHoarder.Api.Persistence;
@@ -232,7 +234,8 @@ public sealed class CatalogIdentityService(
                 var page = await discogs.SearchAsync(new DiscogsSearchQuery(Type: "release", Barcode: barcode), page: 1, perPage: 10, ct);
                 foreach (var hit in page.Items.Where(i => string.Equals(i.Type, "release", StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (CorroboratedSearchHitScore(hint, hit) is not double score)
+                    if (!DiscogsMatchScoring.SearchHitBarcodeMatches(hint, hit)
+                        || CorroboratedSearchHitScore(hint, hit) is not double score)
                         continue;
                     var conf = Math.Max(0.95, score);
                     candidates.Add((hit.Id, hit.MasterId, hit.Title, CatalogIdentityMethod.Barcode, conf,
@@ -250,7 +253,8 @@ public sealed class CatalogIdentityService(
                     new DiscogsSearchQuery(Type: "release", Label: label, Catno: catno), page: 1, perPage: 10, ct);
                 foreach (var hit in page.Items.Where(i => string.Equals(i.Type, "release", StringComparison.OrdinalIgnoreCase)))
                 {
-                    if (CorroboratedSearchHitScore(hint, hit) is not double score)
+                    if (!DiscogsMatchScoring.SearchHitCatalogNumberMatches(hint, hit)
+                        || CorroboratedSearchHitScore(hint, hit) is not double score)
                         continue;
                     var conf = Math.Max(0.93, score);
                     candidates.Add((hit.Id, hit.MasterId, hit.Title, CatalogIdentityMethod.CatalogNumber, conf,
@@ -724,8 +728,15 @@ public sealed class CatalogIdentityService(
     private async Task<long?> TryLinkedReleasesArtistAsync(Guid ownerId, string artistName, CancellationToken ct)
     {
         var songs = await LoadArtistSongsAsync(ownerId, artistName, ct);
+        var subjectKey = DiscogsMatchScoring.ArtistSubjectKey(artistName);
+        if (DestinationPathResolver.IsVariousArtistsSentinel(artistName))
+            return null;
+
         var artistIds = songs
-            .Where(s => s.DiscogsArtistId is > 0 && s.DiscogsReleaseId is > 0)
+            .Where(s => CatalogKeys.NameKey(s.AlbumArtist) == subjectKey
+                && s.DiscogsArtistId is > 0
+                && s.DiscogsArtistId != DiscogsReleaseMatcher.VariousArtistsId
+                && s.DiscogsReleaseId is > 0)
             .GroupBy(s => DiscogsMatchScoring.AlbumSubjectKey(s.AlbumArtist ?? s.Artist ?? "", s.Album ?? ""))
             .Where(g => g.Key.Length > 1)
             .Select(g => g.Select(s => s.DiscogsArtistId!.Value).First())
@@ -906,9 +917,13 @@ public sealed class CatalogIdentityService(
     /// Barcode and label+catno searches are fuzzy on Discogs, so a hit only earns its method's
     /// confidence floor when its own title and artist agree with the library album.
     /// </summary>
-    private static double? CorroboratedSearchHitScore(DiscogsMatchScoring.LibraryAlbumHint hint, DiscogsSearchResult hit)
+    private static double? CorroboratedSearchHitScore(
+        DiscogsMatchScoring.LibraryAlbumHint hint,
+        DiscogsSearchResult hit,
+        bool requireBarcode = false,
+        bool requireCatalogNumber = false)
     {
-        var score = DiscogsMatchScoring.ScoreSearchHit(hint, hit);
+        var score = DiscogsMatchScoring.ScoreSearchHit(hint, hit, requireBarcode, requireCatalogNumber);
         if (score <= 0 || !DiscogsMatchScoring.SearchHitArtistMatches(hint, hit))
             return null;
         return score;

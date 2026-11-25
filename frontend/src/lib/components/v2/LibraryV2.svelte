@@ -81,6 +81,7 @@
   } from '#lib/api-client.ts';
   import { isAnyUnreleasedSong, isUnreleasedSong } from '#lib/release-status.ts';
   import { parseBrowseFilter, applyBrowseFilter, browseFilterLabel } from '#lib/browse-filter.ts';
+  import { recordLabels } from '#lib/library/labels.ts';
   import { formatDuration, formatFileSize, formatTotalDuration } from '#lib/formatters.ts';
   import { toPlayerSong } from '#lib/api-client.ts';
   import { IsMobile } from '#lib/hooks/is-mobile.svelte.ts';
@@ -304,13 +305,26 @@
   const albumFilterLoading = $derived(
     albumFilterKey !== '' && albumFilterResult.key !== albumFilterKey
   );
-  const scopedAlbums = $derived(
+  const albumsBeforeLabel = $derived(
     !isAlbumFilterActive
       ? allAlbums
       : albumFilterLoading
         ? []
         : hydrateAlbums(albumFilterResult.dtos, songsStore.songsById)
   );
+  // Label is client-only (the albums endpoint has no label= yet); narrow hydrated cards in place.
+  const scopedAlbums = $derived.by(() => {
+    const label = browse?.label;
+    if (!label) return albumsBeforeLabel;
+    const target = label.toLowerCase();
+    return albumsBeforeLabel.filter(
+      (album) =>
+        recordLabels(album.label).some((name) => name.toLowerCase() === target) ||
+        album.songs.some((song) =>
+          recordLabels(song.label).some((name) => name.toLowerCase() === target)
+        )
+    );
+  });
 
   // Provider-link status per album (linked / localOnly / pending) for the grid corner badges.
   // One batch lookup, scoped to the albums this view actually renders and refreshed when that set

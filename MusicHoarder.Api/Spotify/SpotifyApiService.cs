@@ -213,8 +213,7 @@ public class SpotifyApiService(
                 ? addedAtProp.GetDateTime()
                 : DateTime.MinValue;
 
-            if ((!item.TryGetProperty("item", out var track) && !item.TryGetProperty("track", out track))
-                || track.ValueKind != JsonValueKind.Object)
+            if (!item.TryGetProperty("item", out var track) || track.ValueKind != JsonValueKind.Object)
                 continue;
 
             var parsed = ParseTrackObject(track, addedAt);
@@ -298,9 +297,9 @@ public class SpotifyApiService(
         }
 
         var trackCount = 0;
-        if ((item.TryGetProperty("items", out var tracks) || item.TryGetProperty("tracks", out tracks))
-            && tracks.ValueKind == JsonValueKind.Object
-            && tracks.TryGetProperty("total", out var totalProp))
+        if (item.TryGetProperty("items", out var items)
+            && items.ValueKind == JsonValueKind.Object
+            && items.TryGetProperty("total", out var totalProp))
             trackCount = totalProp.GetInt32();
 
         string? ownerName = null;

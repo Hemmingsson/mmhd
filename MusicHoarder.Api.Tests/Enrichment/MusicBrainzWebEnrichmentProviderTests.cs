@@ -233,5 +233,8 @@ public class MusicBrainzWebEnrichmentProviderTests
         public Task<IReadOnlyList<MusicBrainzReleaseSearchResult>> SearchReleasesAsync(
             string artist, string album, int limit, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<MusicBrainzReleaseSearchResult>>([]);
+
+        public Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct)
+            => Task.FromResult<string?>(null);
     }
 }
