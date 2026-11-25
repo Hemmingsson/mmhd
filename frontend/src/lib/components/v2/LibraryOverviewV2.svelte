@@ -148,11 +148,18 @@
     icon: AudioLines,
     count: undefined as number | undefined
   };
+  const genresRow = {
+    href: '/genres',
+    label: 'Genres & styles',
+    icon: AudioLines,
+    count: undefined
+  };
   const labelsRow = { href: '/labels', label: 'Labels', icon: Tags, count: undefined };
   const allLibraryRows = $derived([
     { href: '/library', label: 'Albums', icon: Disc3, count: allAlbums.length },
     { href: '/artists', label: 'Artists', icon: Mic2, count: artistGroups.length },
     labelsRow,
+    genresRow,
     { href: '/tracks', label: 'My tracks', icon: ListMusic, count: trackListSongs.length },
     {
       href: '/tracks?f=mh-liked',
@@ -175,7 +182,7 @@
     listeningRow
   ]);
   const libraryRows = $derived(
-    groupTabs ? allLibraryRows : [labelsRow, playlistsRow, listeningRow]
+    groupTabs ? allLibraryRows : [labelsRow, genresRow, playlistsRow, listeningRow]
   );
 
   // ── playback ────────────────────────────────────────────────────────────────

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { genreCount } from '#lib/library/genre-browser.ts';
+  import { groupByLabel } from '#lib/library/labels.ts';
   import { page } from '$app/state';
   import { ChevronDown } from '@lucide/svelte';
   import * as Sidebar from '#lib/components/ui/sidebar/index.ts';
@@ -38,6 +40,8 @@
   // and the Artists grid's own lists, so a badge cannot disagree with the page it opens (the
   // artist badge once counted distinct album-artist strings, which reads "A & B" as an artist the
   // grid splits in two). Null until the library has loaded.
+  const styleCount = $derived(genreCount(songsStore.albums));
+  const labelCount = $derived(groupByLabel(songsStore.albums).length);
   const libraryCounts = $derived(songsStore.libraryCounts);
   // Storage is measured on disk by the API (every managed folder, not the DB's source-size sum)
   // and shown against the real volume capacity — the same figure and bar as the Manage hub and
@@ -70,6 +74,8 @@
   const COUNTS: Record<string, () => number | string | null> = {
     albums: () => libraryCounts?.albums ?? null,
     artists: () => libraryCounts?.artists ?? null,
+    genres: () => (libraryCounts ? styleCount : null),
+    labels: () => (libraryCounts ? labelCount : null),
     tracks: () => libraryCounts?.tracks ?? null,
     review: () => inbox.review,
     dupes: () => inbox.dupes,

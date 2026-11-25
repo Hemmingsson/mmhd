@@ -194,6 +194,13 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: 'record labels imprints catalogs releases'
       },
       {
+        id: 'genres',
+        label: 'Genres & styles',
+        href: '/genres',
+        icon: AudioLines,
+        keywords: 'discogs genre style tags library browse'
+      },
+      {
         // One list, sliced by chips. It replaced three near-identical routes — /my-music (which
         // showed the same rows as this one on any library without album fill), /liked, and this —
         // because a chip row does the same job in a quarter of the sidebar and, unlike routes,
@@ -676,7 +683,7 @@ const LISTEN = (() => {
  * Overview instead, as Albums, Artists and Tracks are for an admin; the sidebar lists them at md+.
  */
 const MEMBER_LISTEN_TABS = LISTEN.items.filter(
-  (item) => !['playlists', 'listening', 'labels'].includes(item.id)
+  (item) => !['playlists', 'listening', 'labels', 'genres'].includes(item.id)
 );
 
 const ITEM_TABS: NavTab[] = MEMBER_LISTEN_TABS.map((item) => ({

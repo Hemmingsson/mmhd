@@ -37,6 +37,7 @@
   import ArtistShelvesV2 from '#lib/components/v2/ArtistShelvesV2.svelte';
   import TrackRowMenu, { activateTrack } from '#lib/components/v2/TrackRowMenu.svelte';
   import TrackRowText from '#lib/components/v2/TrackRowText.svelte';
+  import LibraryProfileV2 from './LibraryProfileV2.svelte';
   import ArtistActionsV2 from '#lib/components/v2/ArtistActionsV2.svelte';
   import ArtistDiscographyV2 from '#lib/components/v2/ArtistDiscographyV2.svelte';
   import { ArtistPageState } from '#lib/stores/artist-page.svelte.ts';
@@ -1302,6 +1303,9 @@
         />
       </div>
 
+      {#if showCatalog}<div class="px-4 md:px-0">
+          <LibraryProfileV2 kind="artist" name={artistName} />
+        </div>{/if}
       {#if popularAll.length > 0 || likedArtistSongs.length > 0 || latestRelease}
         <div class="grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
           {#if popularAll.length > 0}

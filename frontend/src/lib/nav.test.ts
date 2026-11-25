@@ -84,13 +84,14 @@ describe('NAV_GROUPS', () => {
   // Listen used to carry three flat track lists — /my-music, /tracks and /liked — that differed only
   // by a predicate. They are one route sliced by chips now, so an item appearing here should be a
   // deliberate act, not a filter that grew a URL. Playlists was one: a thing of its own, not a slice.
-  it('is Overview / Albums / Artists / Labels / Tracks / Playlists / Listening, in that order', () => {
+  it('is Overview / Albums / Artists / Labels / Genres / Tracks / Playlists / Listening, in that order', () => {
     const listen = NAV_GROUPS.find((g) => g.id === 'listen');
     expect(listen?.items.map((i) => i.id)).toEqual([
       'overview',
       'albums',
       'artists',
       'labels',
+      'genres',
       'tracks',
       'playlists',
       'listening'
@@ -307,6 +308,7 @@ describe('what each account may see', () => {
       '/library',
       '/artists',
       '/labels',
+      '/genres',
       '/tracks',
       '/playlists',
       '/playlists/7',

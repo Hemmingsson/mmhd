@@ -32,6 +32,7 @@ public static class CatalogEndpoints
         group.MapGet("/styles", ListStyles);
         group.MapGet("/facets", GetFacets);
         group.MapGet("/library-artist", FindLibraryArtist);
+        group.MapGet("/library-profile", LibraryProfiles.GetAsync);
         group.MapGet("/releases/{id:int}/availability", GetAvailability);
         group.MapPost("/releases/{id:int}/acquire", Acquire);
         group.MapGet("/images/{id:int}", GetImage);

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { page } from '$app/state';
+  import { isAdmin } from '#lib/auth/capabilities.ts';
+  import LibraryProfileV2 from '#lib/components/v2/LibraryProfileV2.svelte';
   import { groupByLabel, recordLabels } from '#lib/library/labels.ts';
   type Group = ReturnType<typeof groupByLabel>[number];
   type Album = Group['albums'][number];
@@ -20,6 +23,20 @@
   let search = $state('');
   const key = (s?: string | null) => (s ?? '').trim().toLowerCase();
   const selected = $derived(groups.find((g) => key(g.name) === key(requested)));
+  let sort = $state<'newest' | 'oldest' | 'title'>('newest');
+  const releases = $derived(
+    (selected?.albums ?? []).toSorted((a, b) => {
+      const ad = a.releaseDate || a.year?.toString(),
+        bd = b.releaseDate || b.year?.toString();
+      if (sort !== 'title') {
+        if (!ad && bd) return 1;
+        if (ad && !bd) return -1;
+        const order = (ad ?? '').localeCompare(bd ?? '');
+        if (order) return sort === 'newest' ? -order : order;
+      }
+      return a.title.localeCompare(b.title) || a.artist.localeCompare(b.artist);
+    })
+  );
   const visible = $derived(groups.filter((g) => key(g.name).includes(key(search))));
   const artwork = (g: Group) =>
     portraits[key(g.name)] || g.albums.find((a) => a.coverUrl)?.coverUrl;
@@ -72,8 +89,17 @@
           <p>{selected.albums.length} albums · {tracks.length} tracks · {artists.length} artists</p>
         </div>
       </header>
-      <h2>Albums</h2>
-      {#each selected.albums as album (album.key)}
+      {#if isAdmin(page.data.user)}<LibraryProfileV2 kind="label" name={selected.name} />{/if}
+      <div class="releases-heading">
+        <h2>Releases</h2>
+        <label
+          >Sort <select bind:value={sort}>
+            <option value="newest">Newest first</option><option value="oldest">Oldest first</option
+            ><option value="title">Title A–Z</option>
+          </select></label
+        >
+      </div>
+      {#each releases as album (album.key)}
         <a class="item" href={'/library?album=' + encodeURIComponent(album.key)}>
           {@render image(album.title, album.coverUrl, false)}
           <span
@@ -127,6 +153,16 @@
 </section>
 
 <style>
+  .releases-heading {
+    margin-top: 1.75rem;
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .releases-heading h2 {
+    margin: 0;
+  }
   .label-page {
     padding: 1rem clamp(1rem, 3vw, 2rem) 5rem;
     max-width: 74rem;

@@ -66,6 +66,7 @@ public record MusicBrainzUrlRelation(string Type, string Url);
 
 public interface IMusicBrainzWebService
 {
+    Task<string?> CountryForDiscogsLabelAsync(long labelId, CancellationToken ct) => Task.FromResult<string?>(null);
     Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct) => Task.FromResult<string?>(null);
     Task<MusicBrainzRecording?> LookupByRecordingIdAsync(string mbid, CancellationToken ct = default);
     Task<MusicBrainzRecording?> LookupByIsrcAsync(string isrc, CancellationToken ct = default);
@@ -112,6 +113,19 @@ public sealed partial class MusicBrainzWebService(
 
     [GeneratedRegex(@"^/release/([1-9][0-9]*)(?:-[^/]*)?/?$")]
     private static partial Regex DiscogsReleasePath();
+
+    public async Task<string?> CountryForDiscogsLabelAsync(long labelId, CancellationToken ct)
+    {
+        var resource = Uri.EscapeDataString($"https://www.discogs.com/label/{labelId}");
+        var entry = await GetAsync<JsonObject>($"url?resource={resource}&inc=label-rels&fmt=json", ct);
+        if (entry?["relations"] is not JsonArray relations) return null;
+        var ids = relations.Where(r => (string?)r?["type"] == "discogs")
+            .Select(r => (string?)r?["label"]?["id"]).OfType<string>().Distinct().ToArray();
+        if (ids.Length != 1 || !Guid.TryParse(ids[0], out var mbid)) return null;
+
+        var label = await GetAsync<JsonObject>($"label/{mbid:D}?fmt=json", ct);
+        return (string?)label?["country"];
+    }
 
     public async Task<string?> DiscogsReleaseIdAsync(Guid release, CancellationToken ct)
     {
