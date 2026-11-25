@@ -146,9 +146,10 @@ export function fetchCatalogArtist(id: number): Promise<CatalogArtistDetailDto> 
 }
 
 export function fetchCatalogLabels(
-  query: CatalogListQuery = {}
+  query: CatalogListQuery = {},
+  signal?: AbortSignal
 ): Promise<CatalogPage<CatalogLabelCardDto>> {
-  return requestJson(`${BASE}/labels${listParams(query)}`);
+  return requestJson(`${BASE}/labels${listParams(query)}`, { signal });
 }
 
 export function fetchCatalogLabel(id: number): Promise<CatalogLabelDetailDto> {
