@@ -1,0 +1,179 @@
+{
+ "id": 565,
+ "main_release": 1545313,
+ "most_recent_release": 38238924,
+ "resource_url": "https://api.discogs.com/masters/565",
+ "uri": "https://www.discogs.com/master/565-Aphex-Twin-Selected-Ambient-Works-85-92",
+ "versions_url": "https://api.discogs.com/masters/565/versions",
+ "main_release_url": "https://api.discogs.com/releases/1545313",
+ "most_recent_release_url": "https://api.discogs.com/releases/38238924",
+ "images": [
+  {
+   "type": "primary",
+   "uri": "https://i.discogs.com/CNUO9Rh7SFL3v9tkDGUSyQcuhHRbX0kdL_GMXIE1yVU/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS02OTk2LmpwZWc.jpeg",
+   "resource_url": "https://i.discogs.com/CNUO9Rh7SFL3v9tkDGUSyQcuhHRbX0kdL_GMXIE1yVU/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS02OTk2LmpwZWc.jpeg",
+   "uri150": "https://i.discogs.com/LiU5UqO797lP-D51c17A3OjS2w3s4K_nJ4iNPd3v8y8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS02OTk2LmpwZWc.jpeg",
+   "width": 600,
+   "height": 594
+  },
+  {
+   "type": "secondary",
+   "uri": "https://i.discogs.com/m2d3vnruSJvfd4fdAidraoJHBCmB3mpDxroFJhPJDHE/rs:fit/g:sm/q:90/h:466/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS0zODI0LmpwZWc.jpeg",
+   "resource_url": "https://i.discogs.com/m2d3vnruSJvfd4fdAidraoJHBCmB3mpDxroFJhPJDHE/rs:fit/g:sm/q:90/h:466/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS0zODI0LmpwZWc.jpeg",
+   "uri150": "https://i.discogs.com/ioVthTudJFxAp1g6XDbisYB3rLIBD6cJ8IbTh90kVN0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS0zODI0LmpwZWc.jpeg",
+   "width": 600,
+   "height": 466
+  },
+  {
+   "type": "secondary",
+   "uri": "https://i.discogs.com/jLL79WfnaLi1okFKVWznNedLpDuVCo95Mri51mmiNp0/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS04MDk2LmpwZWc.jpeg",
+   "resource_url": "https://i.discogs.com/jLL79WfnaLi1okFKVWznNedLpDuVCo95Mri51mmiNp0/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS04MDk2LmpwZWc.jpeg",
+   "uri150": "https://i.discogs.com/uEfE3AveEehKYCRMw1Z8nQEoE-deNX404iGrC4ZxV-k/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTY2NTQ3OTEw/MS04MDk2LmpwZWc.jpeg",
+   "width": 599,
+   "height": 600
+  },
+  {
+   "type": "secondary",
+   "uri": "https://i.discogs.com/Vg1w2QIhTy9s1QmAu2-iJrurWu1MF4q9jwFD4laUHMw/rs:fit/g:sm/q:90/h:560/w:568/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTQ5MzA0Mzky/OC04MTUyLmpwZWc.jpeg",
+   "resource_url": "https://i.discogs.com/Vg1w2QIhTy9s1QmAu2-iJrurWu1MF4q9jwFD4laUHMw/rs:fit/g:sm/q:90/h:560/w:568/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTQ5MzA0Mzky/OC04MTUyLmpwZWc.jpeg",
+   "uri150": "https://i.discogs.com/RFUUtS1FUStOWUEjKVPAAADGsi9k4_EELeKySCzsUkA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDUz/MTMtMTQ5MzA0Mzky/OC04MTUyLmpwZWc.jpeg",
+   "width": 568,
+   "height": 560
+  }
+ ],
+ "genres": [
+  "Electronic"
+ ],
+ "styles": [
+  "Techno",
+  "IDM",
+  "Ambient",
+  "Experimental"
+ ],
+ "year": 1992,
+ "tracklist": [
+  {
+   "position": "1",
+   "type_": "track",
+   "title": "Xtal",
+   "duration": "4:51"
+  },
+  {
+   "position": "2",
+   "type_": "track",
+   "title": "Tha",
+   "duration": "9:01"
+  },
+  {
+   "position": "3",
+   "type_": "track",
+   "title": "Pulsewidth",
+   "duration": "3:47"
+  },
+  {
+   "position": "4",
+   "type_": "track",
+   "title": "Ageispolis",
+   "duration": "5:21"
+  },
+  {
+   "position": "5",
+   "type_": "track",
+   "title": "I",
+   "duration": "1:13"
+  },
+  {
+   "position": "6",
+   "type_": "track",
+   "title": "Green Calx",
+   "duration": "6:02"
+  },
+  {
+   "position": "7",
+   "type_": "track",
+   "title": "Heliosphan",
+   "duration": "4:51"
+  },
+  {
+   "position": "8",
+   "type_": "track",
+   "title": "We Are The Music Makers",
+   "duration": "7:42"
+  },
+  {
+   "position": "9",
+   "type_": "track",
+   "title": "Schottkey 7th Path",
+   "duration": "5:07"
+  },
+  {
+   "position": "10",
+   "type_": "track",
+   "title": "Ptolemy",
+   "duration": "7:12"
+  },
+  {
+   "position": "11",
+   "type_": "track",
+   "title": "Hedphelym",
+   "duration": "6:02"
+  },
+  {
+   "position": "12",
+   "type_": "track",
+   "title": "Delphium",
+   "duration": "5:36"
+  },
+  {
+   "position": "13",
+   "type_": "track",
+   "title": "Actium",
+   "duration": "7:35"
+  }
+ ],
+ "artists": [
+  {
+   "name": "Aphex Twin",
+   "anv": "",
+   "join": "",
+   "role": "",
+   "tracks": "",
+   "id": 45,
+   "resource_url": "https://api.discogs.com/artists/45",
+   "thumbnail_url": "https://i.discogs.com/zPAYtb8QtlB9pf04UEdg6SpdS0UIdvZzXA0TkXRwVes/rs:fit/g:sm/q:90/h:600/w:402/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9BLTQ1LTE2/MjA2NzA4MTktNTg2/My5qcGVn.jpeg"
+  }
+ ],
+ "title": "Selected Ambient Works 85-92",
+ "notes": "\"Xtal\" samples \"Evil At Play\" from [r=5130614].\r\n\"We are the music makers...\" sample taken from the movie \"Willy Wonka & the Chocolate Factory\".",
+ "data_quality": "Correct",
+ "videos": [
+  {
+   "uri": "https://www.youtube.com/watch?v=H26yWAkkTtI",
+   "title": "APHEX TWIN - HELIOSPHAN (AMB LP 3922)",
+   "description": "APHEX TWIN - HELIOSPHAN (AMB LP 3922)  \n\n#pvnx #thismustbethetrack #russianadvisor #ra #bvckgrnd\n\nhttps://www.discogs.com/Aphex-Twin-Selected-Ambient-Works-85-92/release/32662\nLabel: Apollo ‎– AMB LP 3922\nFormat: 2 × Vinyl, LP, Album\nCountry: Belgium\nRele",
+   "duration": 294,
+   "embed": true
+  },
+  {
+   "uri": "https://www.youtube.com/watch?v=aL8lYoOxTv4",
+   "title": "APHEX TWIN - XTAL (AMB LP 3922)",
+   "description": "APHEX TWIN - XTAL (AMB LP 3922)\n\n#pvnx #thismustbethetrack #russianadvisor #ra #bvckgrnd\n\nhttps://www.discogs.com/Aphex-Twin-Selected-Ambient-Works-85-92/release/32662\n\nLabel: Apollo ‎– AMB LP 3922\nFormat: 2 × Vinyl, LP, Album\nCountry: Belgium\nReleased: 1",
+   "duration": 293,
+   "embed": true
+  },
+  {
+   "uri": "https://www.youtube.com/watch?v=aL8lYoOxTv4",
+   "title": "APHEX TWIN - XTAL (AMB LP 3922)",
+   "description": "APHEX TWIN - XTAL (AMB LP 3922)\n\n#pvnx #thismustbethetrack #russianadvisor #ra #bvckgrnd\n\nhttps://www.discogs.com/Aphex-Twin-Selected-Ambient-Works-85-92/release/32662\n\nLabel: Apollo ‎– AMB LP 3922\nFormat: 2 × Vinyl, LP, Album\nCountry: Belgium\nReleased: 1",
+   "duration": 293,
+   "embed": true
+  },
+  {
+   "uri": "https://www.youtube.com/watch?v=Xw5AiRVqfqk",
+   "title": "Aphex Twin - Selected Ambient Works 85-92",
+   "description": "320kbps\n1. 0:00 Xtal\n2. 4:53 Tha\n3. 14:01 Pulsewidth\n4. 17:49 Ageispolis\n5. 23:13 I\n6. 24:29 Green Calx\n7. 30:35 Heliosphan\n8. 35:29 We Are The Music Makers\n9. 43:13 Schottkey 7th Path\n10. 48:21 Ptolemy\n11. 55:35 Hedphelym\n12. 1:01:39 Delphium\n13. 1:07:09",
+   "duration": 0,
+   "embed": true
+  }
+ ]
+}

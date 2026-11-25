@@ -8,6 +8,7 @@ import AudioLines from '@lucide/svelte/icons/audio-lines';
 import ChartColumnBig from '@lucide/svelte/icons/chart-column-big';
 import Compass from '@lucide/svelte/icons/compass';
 import Copy from '@lucide/svelte/icons/copy';
+import BookOpen from '@lucide/svelte/icons/book-open';
 import Disc from '@lucide/svelte/icons/disc';
 import Disc3 from '@lucide/svelte/icons/disc-3';
 import Download from '@lucide/svelte/icons/download';
@@ -418,6 +419,15 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: 'changes feed log activity written'
       },
       {
+        // Discogs catalog browse + admin (ingest, identity, backfill). Instance-wide, admin-only.
+        id: 'catalog',
+        label: 'Catalog',
+        href: '/catalog',
+        icon: BookOpen,
+        keywords: 'discogs catalog artists labels masters releases styles tracks ingest backfill',
+        match: under('/catalog')
+      },
+      {
         // The public links made with "Share link…": how often each was opened and played, and
         // where they are revoked.
         id: 'shares',
@@ -475,6 +485,7 @@ export function navGroupsFor(user: NavAudience): NavGroup[] {
  * - `grader-trial`: admin-only by design (the trial's costs and models).
  * - `performance`: snapshots record the instance's pipeline configuration.
  * - `following`: reads a third-party catalog for the instance, and following queues downloads.
+ * - `catalog`: Discogs catalog tables and admin ingest/backfill for the instance.
  *
  * Hiding an item here hides it from every nav surface, and the route guard
  * ({@link isPathAllowedFor}) follows for any path no visible item shares.
@@ -483,7 +494,8 @@ export const DEMO_HIDDEN_ITEMS: ReadonlySet<string> = new Set([
   'following',
   'playlist-sync',
   'grader-trial',
-  'performance'
+  'performance',
+  'catalog'
 ]);
 
 const DEMO_GROUPS: NavGroup[] = NAV_GROUPS.map((g) => ({
@@ -872,6 +884,7 @@ const GROUPED_PAGES: readonly string[] = [
   '/performance',
   '/stats',
   '/history',
+  '/catalog',
   '/shares',
   '/reports'
 ];

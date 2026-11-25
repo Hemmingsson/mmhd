@@ -128,6 +128,11 @@ var slskdBaseUrl = builder.AddParameter("slskd-base-url", builder.Configuration[
 var slskdApiKey = builder.AddParameter("slskd-api-key", builder.Configuration["Parameters:slskd-api-key"] ?? "", secret: true)
     .WithDescription("slskd API key (web.authentication.api_keys), sent as X-API-Key.")
     .AsOptional();
+// Optional Discogs personal access token (discogs.com/settings/developers). Without one only known
+// release/artist/label/master ids can be read (25 req/min); search, matching and images need it (60 req/min).
+var discogsToken = builder.AddParameter("discogs-token", builder.Configuration["Parameters:discogs-token"] ?? "", secret: true)
+    .WithDescription("Discogs personal access token. Blank → catalog reads by id only; no search, matching or images.")
+    .AsOptional();
 var slskdDownloadsDirectory = builder.AddParameter("slskd-downloads-directory", builder.Configuration["Parameters:slskd-downloads-directory"] ?? "")
     .WithDescription("slskd's completed-downloads directory as seen from the API process (in dev: the host path slskd writes to).")
     .AsOptional();
@@ -199,6 +204,7 @@ var api = builder.AddProject<Projects.MusicHoarder_Api>("api")
     .WithEnvironment("Slskd__BaseUrl", slskdBaseUrl)
     .WithEnvironment("Slskd__ApiKey", slskdApiKey)
     .WithEnvironment("Slskd__DownloadsDirectory", slskdDownloadsDirectory)
+    .WithEnvironment("Discogs__Token", discogsToken)
     .WithEnvironment("StreamingFlac__SidecarUrl", streamingFlacSidecarUrl)
     .WithExternalHttpEndpoints()
     .WithUrl("/scalar", "Scalar");

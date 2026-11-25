@@ -55,21 +55,30 @@ public static class MetadataMerger
         int agreeingProviderCount,
         double autoUpgradeConfidence,
         string? warningsJson,
-        IReadOnlySet<string>? corroboratedFields = null)
+        IReadOnlySet<string>? corroboratedFields = null,
+        IReadOnlySet<string>? supportingFields = null)
     {
         song.CaptureOriginalMetadata();
 
         var highConsensus = agreeingProviderCount >= 2 && confidence >= autoUpgradeConfidence;
         var changes = new List<FieldChange>();
 
+        // A supporting provider's field fills a gap but never replaces a good value on its own say;
+        // the one exception is a genre that is exactly the incoming styles plus Discogs broad genres.
+        bool Supporting(string field) => supportingFields?.Contains(field) == true;
+        var genreUpgrade = Supporting("Genre")
+            ? FieldAuthority.IsStylesOfStoredGenre(song.Genre, winner.Genre)
+            : highConsensus;
+
         // Recording/identity fields: the agreeing cluster already corroborated these, so the blanket
         // consensus flag governs whether they may upgrade a good curated value.
         // Album-level fields: only upgrade a good curated value when *that field* was corroborated by
         // ≥2 providers (or no per-field signal exists, e.g. a solo match → fall back to highConsensus).
         bool Upgrade(string field) =>
-            corroboratedFields is not null && AlbumLevelFields.Contains(field)
+            !Supporting(field)
+            && (corroboratedFields is not null && AlbumLevelFields.Contains(field)
                 ? corroboratedFields.Contains(field)
-                : highConsensus;
+                : highConsensus);
 
         var healed = song.AlbumIdentityHealedAtUtc is not null;
         bool Healed(string field, object? existing) =>
@@ -93,7 +102,7 @@ public static class MetadataMerger
         // descriptive fields (label/catalog/upc/copyright/album-artist-sort) are gated on the same
         // per-field corroboration as the other album-level fields; genre/composer/artist-sort are
         // recording-level and gated on the blanket consensus flag.
-        MergeText(song, "Genre", song.Genre, winner.Genre, v => song.Genre = v, highConsensus, changes);
+        MergeText(song, "Genre", song.Genre, winner.Genre, v => song.Genre = v, genreUpgrade, changes);
         MergeText(song, "Composer", song.Composer, winner.Composer, v => song.Composer = v, highConsensus, changes);
         MergeText(song, "ArtistSort", song.ArtistSort, winner.ArtistSort, v => song.ArtistSort = v, highConsensus, changes);
         MergeText(song, "Label", song.Label, winner.Label, v => song.Label = v, Upgrade("Label"), changes);
@@ -127,6 +136,12 @@ public static class MetadataMerger
         if (!string.IsNullOrWhiteSpace(winner.AcoustIdTrackId)) song.AcoustIdTrackId = winner.AcoustIdTrackId;
         if (!string.IsNullOrWhiteSpace(winner.Isrc)) song.Isrc = winner.Isrc;
 
+        // Discogs ids only fill: a release a person chose or the backfill linked is never re-pointed
+        // by a later match. Recorded so the history shows where the link came from.
+        FillId("DiscogsReleaseId", song.DiscogsReleaseId, winner.DiscogsReleaseId, v => song.DiscogsReleaseId = v, changes);
+        FillId("DiscogsMasterId", song.DiscogsMasterId, winner.DiscogsMasterId, v => song.DiscogsMasterId = v, changes);
+        FillId("DiscogsArtistId", song.DiscogsArtistId, winner.DiscogsArtistId, v => song.DiscogsArtistId = v, changes);
+
         song.MatchedBy = winner.MatchedBy;
         song.MatchConfidence = confidence;
         song.MatchWarnings = warningsJson;
@@ -135,6 +150,18 @@ public static class MetadataMerger
         song.EnrichmentError = null;
 
         return changes;
+    }
+
+    /// <summary>True for a change that came from the supporting provider rather than the winner.</summary>
+    public static bool IsSupportingChange(string field, IReadOnlySet<string>? supportingFields)
+        => supportingFields?.Contains(field) == true || field.StartsWith("Discogs", StringComparison.Ordinal);
+
+    private static void FillId(string field, long? existing, long? incoming, Action<long?> set, List<FieldChange> changes)
+    {
+        if (incoming is null || existing is not null)
+            return;
+        set(incoming);
+        changes.Add(new FieldChange(field, null, incoming.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), Applied: true));
     }
 
     private static void MergeText(

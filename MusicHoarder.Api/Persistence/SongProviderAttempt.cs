@@ -11,6 +11,9 @@ public enum EnrichmentProvider
     Deezer = 4,
     AppleMusic = 5,
     YeTracker = 6,
+    /// <summary>Supporting catalog source: never votes on identity, overlays catalog fields (see
+    /// <see cref="Enrichment.FieldAuthority"/>).</summary>
+    Discogs = 7,
 }
 
 public enum ProviderAttemptStatus

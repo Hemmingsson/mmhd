@@ -41,7 +41,10 @@ public record EnrichmentProviderResult(
     string? Composer = null,
     string? Copyright = null,
     string? ArtistSort = null,
-    string? AlbumArtistSort = null);
+    string? AlbumArtistSort = null,
+    long? DiscogsReleaseId = null,
+    long? DiscogsMasterId = null,
+    long? DiscogsArtistId = null);
 
 public abstract record ProviderOutcome;
 public sealed record ProviderMatched(EnrichmentProviderResult Result) : ProviderOutcome;
@@ -64,10 +67,16 @@ public interface IEnrichmentProvider
         nameof(SongMetadata.Fingerprint),
         nameof(SongMetadata.DurationSeconds),
         nameof(SongMetadata.MusicBrainzId),
-        nameof(SongMetadata.Isrc));
+        nameof(SongMetadata.Isrc),
+        nameof(SongMetadata.DiscogsReleaseId));
 
     string Name { get; }
     int Priority { get; }
+
+    /// <summary>The provider's own switch, for providers without a runtime setting. Read on every pass,
+    /// so a provider that is off is neither run nor counted as enabled by the startup sweeps.</summary>
+    bool IsEnabled => true;
+
     bool CanHandle(SongMetadata song);
     Task<ProviderOutcome> TryEnrichAsync(SongMetadata song, CancellationToken ct = default);
 }

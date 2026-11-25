@@ -221,3 +221,27 @@ internal sealed class MusicBrainzRecordingRefDto
     [JsonPropertyName("length")]
     public int? Length { get; set; }
 }
+
+internal sealed class MusicBrainzUrlRelationsDto
+{
+    [JsonPropertyName("relations")]
+    public List<MusicBrainzRelationDto>? Relations { get; set; }
+}
+
+internal sealed class MusicBrainzRelationDto
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("url")]
+    public MusicBrainzUrlResourceDto? Url { get; set; }
+}
+
+internal sealed class MusicBrainzUrlResourceDto
+{
+    [JsonPropertyName("resource")]
+    public string? Resource { get; set; }
+
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+}

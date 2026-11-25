@@ -158,6 +158,17 @@ internal static class MusicBrainzResponseMapper
         return NullIfBlank(sort);
     }
 
+    internal static IReadOnlyList<MusicBrainzUrlRelation> MapUrlRelations(List<MusicBrainzRelationDto>? relations)
+    {
+        if (relations is null or { Count: 0 })
+            return [];
+
+        return relations
+            .Where(r => !string.IsNullOrWhiteSpace(r.Type) && !string.IsNullOrWhiteSpace(r.Url?.Resource))
+            .Select(r => new MusicBrainzUrlRelation(r.Type!.Trim(), r.Url!.Resource!.Trim()))
+            .ToList();
+    }
+
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string BuildArtistCredit(List<MusicBrainzArtistCreditDto>? credits)

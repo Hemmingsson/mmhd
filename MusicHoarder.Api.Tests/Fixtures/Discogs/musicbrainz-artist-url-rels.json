@@ -1,0 +1,1103 @@
+{
+ "gender-id": "36d3d30a-839d-3eda-8cb3-29be4384e4a9",
+ "life-span": {
+  "begin": "1971-08-18",
+  "end": null,
+  "ended": false
+ },
+ "id": "f22942a1-6f70-4f48-866e-238cb2308fbd",
+ "begin-area": {
+  "disambiguation": "",
+  "id": "1063266a-afe6-4fb3-ab51-0d290a79f979",
+  "name": "Limerick",
+  "sort-name": "Limerick",
+  "type-id": null,
+  "type": null
+ },
+ "isnis": [
+  "0000000114494679"
+ ],
+ "ipis": [
+  "00176951139"
+ ],
+ "end-area": null,
+ "gender": "Male",
+ "type": "Person",
+ "name": "Aphex Twin",
+ "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+ "sort-name": "Aphex Twin",
+ "relations": [
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "6b3e3c85-0002-4f34-aca6-80ace0d7e846",
+   "type": "allmusic",
+   "begin": null,
+   "ended": false,
+   "url": {
+    "resource": "https://www.allmusic.com/artist/mn0000493848",
+    "id": "1e8625f5-9f60-4d89-b1e7-1a88f38b70c4"
+   },
+   "target-credit": "",
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "bandcamp",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "c550166e-0548-4a18-b1d4-e2ae423a3e88",
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "6231aa35-c400-495f-9241-cb0677029000",
+    "resource": "https://aphextwin.bandcamp.com/"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "type": "BBC Music page",
+   "type-id": "d028a975-000c-4525-9333-d3c8425e4b54",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": [],
+   "target-type": "url",
+   "end": "2020-11-19",
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.bbc.co.uk/music/artists/f22942a1-6f70-4f48-866e-238cb2308fbd",
+    "id": "53a17163-c587-4563-949a-d18c2f676540"
+   },
+   "ended": true,
+   "begin": null
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "78f75830-94e1-4138-8f8a-643e3bb21ce5",
+   "type": "biography",
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://warp.net/artists/aphex-twin",
+    "id": "9ef5006a-65b8-4868-8ea1-1a73b5661e0a"
+   },
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "biography",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "78f75830-94e1-4138-8f8a-643e3bb21ce5",
+   "begin": null,
+   "url": {
+    "id": "1ae509a6-ef21-40f1-b644-e08a7a59722e",
+    "resource": "http://www.artistdirect.com/artist/aphex-twin/398032"
+   },
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "target-credit": "",
+   "url": {
+    "resource": "https://warp.net/artists/91436",
+    "id": "26e0be33-7d4e-43ed-a328-b7ac193737f4"
+   },
+   "ended": true,
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "source-credit": "",
+   "type": "biography",
+   "type-id": "78f75830-94e1-4138-8f8a-643e3bb21ce5",
+   "attribute-ids": {},
+   "direction": "forward",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "type": "discography page",
+   "type-id": "4fb0eeec-a6eb-4ae3-ad52-b55765b94e8f",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": [],
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "id": "9ef5006a-65b8-4868-8ea1-1a73b5661e0a",
+    "resource": "https://warp.net/artists/aphex-twin"
+   },
+   "ended": false,
+   "begin": null
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "4fb0eeec-a6eb-4ae3-ad52-b55765b94e8f",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "discography page",
+   "begin": null,
+   "ended": true,
+   "url": {
+    "id": "26e0be33-7d4e-43ed-a328-b7ac193737f4",
+    "resource": "https://warp.net/artists/91436"
+   },
+   "target-credit": "",
+   "target-type": "url",
+   "end": null
+  },
+  {
+   "begin": null,
+   "ended": false,
+   "url": {
+    "id": "565ee5cf-d8dc-40b8-82fe-dc2b089497a8",
+    "resource": "https://www.discogs.com/artist/45"
+   },
+   "target-credit": "",
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "04a5b104-a4c2-4bac-99a1-7b837c37d9e4",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type": "discogs"
+  },
+  {
+   "type": "fanpage",
+   "type-id": "f484f897-81cc-406e-96f9-cd799a04ee24",
+   "attribute-ids": {},
+   "direction": "forward",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": [],
+   "target-type": "url",
+   "end": null,
+   "url": {
+    "resource": "http://bytenoise.co.uk/Aphex_Twin",
+    "id": "a646e32d-f795-4d81-a9a2-aa94b85ea3d7"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "type": "fanpage",
+   "type-id": "f484f897-81cc-406e-96f9-cd799a04ee24",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "resource": "http://www.aphextwin.nu/",
+    "id": "c92b6345-218b-48c1-92aa-779bb2aaf3b4"
+   },
+   "ended": false
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "type": "free streaming",
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "url": {
+    "resource": "https://audiomack.com/aphex-twin-1",
+    "id": "6cc96fdf-2fb5-4c9b-bba7-1bcabc49e419"
+   },
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "source-credit": "",
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "free streaming",
+   "attributes": [],
+   "attribute-values": {},
+   "ended": false,
+   "url": {
+    "id": "e3af1d81-76c7-4b6d-8bd6-34ed85263e3d",
+    "resource": "https://music.youtube.com/channel/UCWmnkYUzoOiOztmPBhIlZjg"
+   },
+   "target-credit": "",
+   "target-type": "url",
+   "end": null,
+   "begin": null
+  },
+  {
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "resource": "https://open.spotify.com/artist/6kBDZFXuLrZgHnvmPu9NsG",
+    "id": "c2405f28-3320-4ffb-833d-e84b07602a17"
+   },
+   "ended": false,
+   "begin": null,
+   "type": "free streaming",
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "type": "free streaming",
+   "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "url": {
+    "id": "a1c47924-71c5-4bdb-89a3-49ac608a488b",
+    "resource": "https://www.deezer.com/artist/580"
+   },
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "221132e9-e30e-43f2-a741-15afc4c5fa7c",
+   "type": "image",
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://commons.wikimedia.org/wiki/File:Aphex_Twin_2.jpg",
+    "id": "e5506386-2073-4a3a-b184-fa20051bb841"
+   },
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.imdb.com/name/nm0416869/",
+    "id": "56af37c0-0039-46da-8fe3-9a23ad82ff6a"
+   },
+   "end": null,
+   "target-type": "url",
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "94c8b0cc-4477-4106-932c-da60e63de61c",
+   "type": "IMDb"
+  },
+  {
+   "begin": null,
+   "ended": false,
+   "url": {
+    "id": "6aa27238-0156-433b-a7c3-e431ee8e3a9c",
+    "resource": "http://www.muzines.co.uk/articles/cagey-canny-krafty/5560"
+   },
+   "target-credit": "",
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type-id": "1f171391-1f98-4f45-b191-038ec3b12395",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "interview"
+  },
+  {
+   "ended": false,
+   "url": {
+    "resource": "https://www.last.fm/music/Aphex+Twin",
+    "id": "e7dcba44-72df-4c35-82a3-61f625a27c49"
+   },
+   "target-credit": "",
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "source-credit": "",
+   "type-id": "08db8098-c0df-4b78-82c3-c8697b4bba7f",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "last.fm",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "begin": null,
+   "ended": false,
+   "url": {
+    "resource": "https://genius.com/artists/Aphex-twin",
+    "id": "6ea8c9f8-e3af-4e7e-b563-7dcc112ba606"
+   },
+   "target-credit": "",
+   "end": null,
+   "target-type": "url",
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "e4d73442-3762-45a8-905c-401da65544ed",
+   "type": "lyrics"
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "35b3a50f-bf0e-4309-a3b4-58eeed8cee6a",
+   "type": "online community",
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.reddit.com/r/aphextwin/",
+    "id": "97f41ca7-579a-4269-a8e9-9a5ed084cd22"
+   },
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "other databases",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "resource": "http://musicmoz.org/Bands_and_Artists/A/Aphex_Twin/",
+    "id": "a09c0bf6-2477-4456-bb68-6ab5ace7c56b"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "id": "a2443742-33b6-4cdf-b740-289d300cb947",
+    "resource": "https://d-nb.info/gnd/134882512"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "other databases",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "attribute-ids": {},
+   "direction": "forward",
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://imvdb.com/n/aphex-twin",
+    "id": "b8000469-004a-4dd1-94b6-8f06b568a67a"
+   },
+   "begin": null,
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "type": "other databases",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "af29445c-0f5f-4d67-acc5-15c0fd0c32b7",
+    "resource": "https://ra.co/dj/aphextwin"
+   },
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "source-credit": "",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "other databases",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "e36cfa9e-f31d-467d-ac02-90faa39a154f",
+    "resource": "https://rateyourmusic.com/artist/aphex-twin"
+   },
+   "begin": null,
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "type": "other databases",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.whosampled.com/Aphex-Twin/",
+    "id": "a7cab56a-3d74-4836-aba3-0d3293d714d5"
+   },
+   "ended": false,
+   "begin": null,
+   "type": "other databases",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "other databases",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+   "begin": null,
+   "url": {
+    "resource": "https://www.worldcat.org/identities/lccn-no99-043303",
+    "id": "a2ae9ac2-a997-461b-9209-d2675a8f011c"
+   },
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "url": {
+    "id": "e98af66d-397f-42a5-8fa1-7cd23d6a1e98",
+    "resource": "https://play.google.com/store/music/artist?id=Acirogtcm4nkyvhghrt3bguv3tu"
+   },
+   "target-credit": "",
+   "ended": true,
+   "target-type": "url",
+   "end": "2020-10-12",
+   "begin": null,
+   "source-credit": "",
+   "type": "purchase for download",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "attribute-ids": {},
+   "direction": "forward",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "type": "purchase for download",
+   "source-credit": "",
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "url": {
+    "resource": "https://aphextwin.warp.net/",
+    "id": "4eedaa18-ba17-4ed7-b470-70ea236ff119"
+   },
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "type": "purchase for download",
+   "source-credit": "",
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "url": {
+    "id": "6ccbd1af-87d2-4463-9454-64e9dceb8114",
+    "resource": "https://bleep.com/artist/76"
+   },
+   "target-credit": ""
+  },
+  {
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "url": {
+    "resource": "https://boomkat.com/artists/aphex-twin",
+    "id": "6a80b1a9-cf4c-4ced-a7a3-bb066d671137"
+   },
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "purchase for download",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "source-credit": ""
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "url": {
+    "resource": "https://itunes.apple.com/gb/artist/id39883194",
+    "id": "c0ec8148-c42a-4f0d-9ac3-208862092162"
+   },
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "purchase for download",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "attribute-ids": {},
+   "direction": "forward",
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "45f45d7d-3b30-490d-a90c-992892f95505",
+    "resource": "https://open.qobuz.com/artist/53267"
+   },
+   "begin": null,
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "type": "purchase for download",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "source-credit": "",
+   "type": "purchase for download",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "attributes": [],
+   "attribute-values": {},
+   "target-credit": "",
+   "url": {
+    "id": "17906177-f815-4efe-8e8f-a056606fbdd3",
+    "resource": "https://www.amazon.co.uk/-/e/B000APRHDS"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url",
+   "begin": null
+  },
+  {
+   "begin": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.beatport.com/artist/aphex-twin/7888",
+    "id": "1749775c-65ae-43e1-819f-71e98119f2d0"
+   },
+   "end": null,
+   "target-type": "url",
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "type": "purchase for download"
+  },
+  {
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+   "type": "purchase for download",
+   "attributes": [],
+   "attribute-values": {},
+   "ended": false,
+   "url": {
+    "id": "8b684647-ac6f-4953-be37-a087fe4842fb",
+    "resource": "https://www.qobuz.com/us-en/interpreter/aphex-twin/53267"
+   },
+   "target-credit": "",
+   "end": null,
+   "target-type": "url",
+   "begin": null
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "url": {
+    "id": "6ccbd1af-87d2-4463-9454-64e9dceb8114",
+    "resource": "https://bleep.com/artist/76"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "type": "purchase for mail-order",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "611b1862-67af-4253-a64f-34adba305d1d",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "611b1862-67af-4253-a64f-34adba305d1d",
+   "type": "purchase for mail-order",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": [],
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "url": {
+    "resource": "https://boomkat.com/artists/aphex-twin",
+    "id": "6a80b1a9-cf4c-4ced-a7a3-bb066d671137"
+   },
+   "target-credit": "",
+   "begin": null
+  },
+  {
+   "attribute-values": {},
+   "attributes": [],
+   "type": "purchase for mail-order",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "611b1862-67af-4253-a64f-34adba305d1d",
+   "source-credit": "",
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.amazon.co.uk/-/e/B000APRHDS",
+    "id": "17906177-f815-4efe-8e8f-a056606fbdd3"
+   },
+   "ended": false
+  },
+  {
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "id": "d20f2c1f-6d34-453e-8550-9fa19c9276e7",
+    "resource": "https://secondhandsongs.com/artist/2647"
+   },
+   "ended": false,
+   "begin": null,
+   "type": "secondhandsongs",
+   "type-id": "79c5b84d-a206-4f4c-9832-78c028c312c3",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "target-credit": "",
+   "url": {
+    "id": "5aa8b713-ff79-4c1a-9472-563d21ba315d",
+    "resource": "https://www.setlist.fm/setlists/aphex-twin-4bd6a78a.html"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "setlistfm",
+   "type-id": "bf5d0d5e-27a1-4e94-9df7-3cdc67b3b207",
+   "direction": "forward",
+   "attribute-ids": {},
+   "source-credit": ""
+  },
+  {
+   "target-type": "url",
+   "end": null,
+   "ended": false,
+   "url": {
+    "resource": "https://twitter.com/AphexTwin",
+    "id": "9f0ddc30-e587-4f6f-bccc-67ba02460136"
+   },
+   "target-credit": "",
+   "begin": null,
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type": "social network",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "1aea4cd0-b51f-45a3-af8a-962bcf751105",
+    "resource": "https://www.facebook.com/aphextwinafx"
+   },
+   "ended": false,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "social network",
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "direction": "forward",
+   "attribute-ids": {}
+  },
+  {
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "target-credit": "",
+   "url": {
+    "id": "37194824-b358-4fd8-992f-05be4e6786ce",
+    "resource": "https://www.instagram.com/aphextwin.afx/"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "social network",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+   "source-credit": ""
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.songkick.com/artists/251546",
+    "id": "0edf62a8-c55f-44af-b559-59fb891c8edf"
+   },
+   "ended": false,
+   "target-type": "url",
+   "end": null,
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "songkick",
+   "type-id": "aac9c4bc-a5b9-30b8-9839-e3ac314c6e58",
+   "direction": "forward",
+   "attribute-ids": {}
+  },
+  {
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+   "type": "soundcloud",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": [],
+   "end": null,
+   "target-type": "url",
+   "ended": false,
+   "url": {
+    "resource": "https://soundcloud.com/aphex-twin-official",
+    "id": "128123bd-eb88-4b16-82db-50c88795d5ea"
+   },
+   "target-credit": "",
+   "begin": null
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "soundcloud",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "44ff9610-a4a5-435e-adec-0f0764e7ca43",
+    "resource": "https://soundcloud.com/richarddjames"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "17b79c96-87d1-4535-b5a7-1a5bc7c372bd",
+    "resource": "https://soundcloud.com/user18081971"
+   },
+   "attribute-values": {},
+   "attributes": [],
+   "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type": "soundcloud",
+   "source-credit": ""
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "streaming",
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "attribute-ids": {},
+   "direction": "forward",
+   "begin": null,
+   "url": {
+    "resource": "https://music.apple.com/gb/artist/39883194",
+    "id": "04365a8e-512c-4127-972f-809b3ac72db4"
+   },
+   "target-credit": "",
+   "ended": false,
+   "target-type": "url",
+   "end": null
+  },
+  {
+   "begin": null,
+   "target-type": "url",
+   "end": null,
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "45f45d7d-3b30-490d-a90c-992892f95505",
+    "resource": "https://open.qobuz.com/artist/53267"
+   },
+   "attribute-values": {},
+   "attributes": [],
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type": "streaming",
+   "source-credit": ""
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "streaming",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "begin": null,
+   "target-credit": "",
+   "url": {
+    "id": "2b928249-91a3-4c42-a916-5b78a829ecef",
+    "resource": "https://tidal.com/artist/3531604"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "url": {
+    "id": "8b684647-ac6f-4953-be37-a087fe4842fb",
+    "resource": "https://www.qobuz.com/us-en/interpreter/aphex-twin/53267"
+   },
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "url",
+   "begin": null,
+   "source-credit": "",
+   "type": "streaming",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "end": null,
+   "target-type": "url",
+   "url": {
+    "resource": "http://viaf.org/viaf/79834028",
+    "id": "628f7eab-03c7-482d-9f96-12212d7cbbbe"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "type": "VIAF",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "e8571dcc-35d4-4e91-a577-a3382fd84460",
+   "source-credit": "",
+   "attribute-values": {},
+   "attributes": []
+  },
+  {
+   "ended": false,
+   "url": {
+    "resource": "https://vimeo.com/user68205945",
+    "id": "1b3bf536-d73f-4d21-83b1-94cbea38409b"
+   },
+   "target-credit": "",
+   "end": null,
+   "target-type": "url",
+   "begin": null,
+   "source-credit": "",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "d86c9450-b6d0-4760-a275-e7547495b48b",
+   "type": "video channel",
+   "attributes": [],
+   "attribute-values": {}
+  },
+  {
+   "begin": null,
+   "end": null,
+   "target-type": "url",
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.wikidata.org/wiki/Q223161",
+    "id": "515f1247-eafd-4260-bf17-9449d33bc7c4"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "attributes": [],
+   "type": "wikidata",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "689870a4-a1e4-4912-b17f-7b2664215698",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "attribute-ids": {},
+   "direction": "forward",
+   "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+   "type": "youtube",
+   "attributes": [],
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "url": {
+    "id": "4ea39785-52f4-42f5-8cc0-34b36bca5b4b",
+    "resource": "https://www.youtube.com/channel/UC4hfA78X-lqiRERBZLTnLBw"
+   },
+   "end": null,
+   "target-type": "url",
+   "begin": null
+  },
+  {
+   "attributes": [],
+   "attribute-values": {},
+   "source-credit": "",
+   "type": "youtube",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+   "begin": null,
+   "url": {
+    "resource": "https://www.youtube.com/channel/UCd_RgCaaP_QEXl_Zj4Gv5iQ",
+    "id": "21d28333-3a4d-46a7-b59c-aff7cf0d3637"
+   },
+   "target-credit": "",
+   "ended": false,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "source-credit": "",
+   "type": "youtube",
+   "direction": "forward",
+   "attribute-ids": {},
+   "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+   "attributes": [],
+   "attribute-values": {},
+   "target-credit": "",
+   "url": {
+    "resource": "https://www.youtube.com/channel/UCWmnkYUzoOiOztmPBhIlZjg",
+    "id": "afb3b1b0-ea37-4bfd-9e53-682e51da3af2"
+   },
+   "ended": false,
+   "end": null,
+   "target-type": "url",
+   "begin": null
+  }
+ ],
+ "country": "GB",
+ "disambiguation": "",
+ "area": {
+  "type": null,
+  "id": "f03d09b3-39dc-4083-afd6-159e3f0d462f",
+  "name": "London",
+  "type-id": null,
+  "sort-name": "London",
+  "disambiguation": "Greater London"
+ }
+}
