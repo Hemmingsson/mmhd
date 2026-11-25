@@ -254,139 +254,129 @@ public sealed class DiscogsClient : IDiscogsClient
     /// </summary>
     private async Task<HttpResponseMessage?> SendWithRetryAsync(Uri uri, string resourceTag, CancellationToken ct)
     {
-        var opts = _options.CurrentValue;
-        var maxRetries = Math.Max(0, opts.MaxRetries);
+        var maxRetries = Math.Max(0, _options.CurrentValue.MaxRetries);
 
         for (var attempt = 0; ; attempt++)
         {
             ct.ThrowIfCancellationRequested();
-            opts = _options.CurrentValue;
+            var (response, retryDelay) = await SendAttemptAsync(uri, resourceTag, attempt, maxRetries, ct)
+                .ConfigureAwait(false);
+            if (response is not null)
+                return response;
 
-            await _gate.AcquireAsync(opts.MaxConcurrency, opts.RequestsPerMinute, ct).ConfigureAwait(false);
-            HttpResponseMessage? response = null;
+            // The permit is already back in the gate, so other requests run while this one backs off.
+            await Task.Delay(retryDelay, _time, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// One HTTP attempt under one gate permit, released exactly once when the attempt ends — before the
+    /// caller reads the body or backs off. Returns the final response, or no response and how long to
+    /// wait before the next attempt; throws on terminal failures.
+    /// </summary>
+    private async Task<(HttpResponseMessage? Response, TimeSpan RetryDelay)> SendAttemptAsync(
+        Uri uri, string resourceTag, int attempt, int maxRetries, CancellationToken ct)
+    {
+        var opts = _options.CurrentValue;
+        await _gate.AcquireAsync(opts.MaxConcurrency, opts.RequestsPerMinute, ct).ConfigureAwait(false);
+        HttpResponseMessage? response = null;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            ApplyHeaders(request, opts);
+
+            Interlocked.Increment(ref _requestsSent);
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                ApplyHeaders(request, opts);
-
-                Interlocked.Increment(ref _requestsSent);
-                try
-                {
-                    response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
-                        .ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-                {
-                    _gate.Release();
-                    response = null;
-
-                    if (attempt >= maxRetries)
-                    {
-                        _metrics.RecordRequest(resourceTag, "error");
-                        throw new DiscogsApiException(
-                            $"Discogs request failed: {ex.Message}",
-                            statusCode: null,
-                            inner: ex);
-                    }
-
-                    _metrics.RecordRetry();
-                    var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // 1, 2, 4…
-                    _logger.LogWarning(ex,
-                        "Discogs transport failure for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
-                        resourceTag, backoff.TotalSeconds, attempt + 1, maxRetries);
-                    await Task.Delay(backoff, _time, ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                NoteRateLimitHeaders(response);
-
-                var status = (int)response.StatusCode;
-
-                if (status is 401 or 403)
-                {
-                    _metrics.RecordRequest(resourceTag, "error");
-                    var body = await SafeReadBodyAsync(response, ct).ConfigureAwait(false);
-                    response.Dispose();
-                    response = null;
-                    throw new DiscogsApiException(
-                        $"Discogs authorization failed ({status}): {Truncate(body)}",
-                        status);
-                }
-
-                if (status == 429)
-                {
-                    var retryAfter = RetryAfterHeader.Read(response, _time.GetUtcNow())
-                        ?? TimeSpan.FromSeconds(60);
-                    response.Dispose();
-                    response = null;
-                    _gate.Release();
-
-                    if (attempt >= maxRetries || retryAfter.TotalSeconds > opts.MaxRetryWaitSeconds)
-                    {
-                        _metrics.RecordRequest(resourceTag, "rate_limited");
-                        throw new ProviderRateLimitedException(retryAfter);
-                    }
-
-                    _metrics.RecordRetry();
-                    _logger.LogWarning(
-                        "Discogs rate limited for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
-                        resourceTag, retryAfter.TotalSeconds, attempt + 1, maxRetries);
-                    await Task.Delay(retryAfter, _time, ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                if (status >= 500)
-                {
-                    response.Dispose();
-                    response = null;
-                    _gate.Release();
-
-                    if (attempt >= maxRetries)
-                    {
-                        _metrics.RecordRequest(resourceTag, "error");
-                        throw new DiscogsApiException($"Discogs server error ({status})", status);
-                    }
-
-                    _metrics.RecordRetry();
-                    var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt));
-                    _logger.LogWarning(
-                        "Discogs HTTP {Status} for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
-                        status, resourceTag, backoff.TotalSeconds, attempt + 1, maxRetries);
-                    await Task.Delay(backoff, _time, ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                // Success, 404, or other non-retryable status — hand the response to the caller.
-                // Keep the concurrency permit released before returning so the caller doesn't hold it
-                // while reading the body.
-                _gate.Release();
-                return response;
+                response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+                    .ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                response?.Dispose();
-                try { _gate.Release(); } catch (SemaphoreFullException) { /* already released */ }
                 throw;
             }
-            catch (ProviderRateLimitedException)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                throw;
+                if (attempt >= maxRetries)
+                {
+                    _metrics.RecordRequest(resourceTag, "error");
+                    throw new DiscogsApiException(
+                        $"Discogs request failed: {ex.Message}",
+                        statusCode: null,
+                        inner: ex);
+                }
+
+                _metrics.RecordRetry();
+                var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // 1, 2, 4…
+                _logger.LogWarning(ex,
+                    "Discogs transport failure for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
+                    resourceTag, backoff.TotalSeconds, attempt + 1, maxRetries);
+                return (null, backoff);
             }
-            catch (DiscogsApiException)
+
+            NoteRateLimitHeaders(response);
+
+            var status = (int)response.StatusCode;
+
+            if (status is 401 or 403)
             {
-                try { _gate.Release(); } catch (SemaphoreFullException) { /* already released */ }
-                throw;
+                _metrics.RecordRequest(resourceTag, "error");
+                var body = await SafeReadBodyAsync(response, ct).ConfigureAwait(false);
+                throw new DiscogsApiException(
+                    $"Discogs authorization failed ({status}): {Truncate(body)}",
+                    status);
             }
-            catch
+
+            if (status == 429)
             {
-                response?.Dispose();
-                try { _gate.Release(); } catch (SemaphoreFullException) { /* already released */ }
-                throw;
+                var retryAfter = RetryAfterHeader.Read(response, _time.GetUtcNow())
+                    ?? TimeSpan.FromSeconds(60);
+                response.Dispose();
+                response = null;
+
+                if (attempt >= maxRetries || retryAfter.TotalSeconds > opts.MaxRetryWaitSeconds)
+                {
+                    _metrics.RecordRequest(resourceTag, "rate_limited");
+                    throw new ProviderRateLimitedException(retryAfter);
+                }
+
+                _metrics.RecordRetry();
+                _logger.LogWarning(
+                    "Discogs rate limited for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
+                    resourceTag, retryAfter.TotalSeconds, attempt + 1, maxRetries);
+                return (null, retryAfter);
             }
+
+            if (status >= 500)
+            {
+                response.Dispose();
+                response = null;
+
+                if (attempt >= maxRetries)
+                {
+                    _metrics.RecordRequest(resourceTag, "error");
+                    throw new DiscogsApiException($"Discogs server error ({status})", status);
+                }
+
+                _metrics.RecordRetry();
+                var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(
+                    "Discogs HTTP {Status} for {Resource}; retrying after {Delay}s (attempt {Attempt}/{Max})",
+                    status, resourceTag, backoff.TotalSeconds, attempt + 1, maxRetries);
+                return (null, backoff);
+            }
+
+            // Success, 404, or other non-retryable status — hand the response to the caller.
+            return (response, TimeSpan.Zero);
+        }
+        catch
+        {
+            response?.Dispose();
+            throw;
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 

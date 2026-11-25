@@ -8,8 +8,9 @@ using MusicHoarder.Api.Persistence;
 namespace MusicHoarder.Api.Enrichment.AlbumTracklist.Providers;
 
 /// <summary>
-/// Album tracklists from Discogs: the master's main release, found by artist + album. One more
-/// candidate for <see cref="AlbumTracklistReconciler"/>, which still decides the canonical list.
+/// Album tracklists from Discogs: the master's main release, found by artist + album. A supporting
+/// candidate for <see cref="AlbumTracklistReconciler"/>: it never votes on the edition, the slots or a
+/// track's contest, and only corroborates tracks the voting providers already list.
 /// Off unless <see cref="DiscogsOptions.EnableTracklistProvider"/>; needs a token to search.
 /// </summary>
 public sealed class DiscogsAlbumTracklistProvider(
@@ -34,12 +35,13 @@ public sealed class DiscogsAlbumTracklistProvider(
         if (tracks.Count == 0)
             return null;
 
-        var lead = (release.Artists ?? []).FirstOrDefault(a => a.Id != DiscogsReleaseMatcher.VariousArtistsId);
+        var isVarious = release.Artists?.Any(a => a.Id == DiscogsReleaseMatcher.VariousArtistsId) == true;
+        var lead = DiscogsReleaseMatcher.AlbumArtist(release.Artists, query.AlbumArtist);
         return new AlbumTracklistCandidate(
             Source,
             release.Id.ToString(CultureInfo.InvariantCulture),
             release.Title,
-            DiscogsReleaseMatcher.DisplayName(lead?.Name),
+            isVarious ? "Various Artists" : DiscogsReleaseMatcher.DisplayName(lead?.Name),
             match.Master?.Value.Year ?? release.Year,
             CoverArtUrl: null,
             tracks.Select(t => new CandidateTrack(t.DiscNumber, t.TrackNumber, t.Title, t.DurationMs, null)).ToList());

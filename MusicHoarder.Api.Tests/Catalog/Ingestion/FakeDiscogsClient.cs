@@ -16,6 +16,7 @@ internal sealed class FakeDiscogsClient : IDiscogsClient
     public Dictionary<long, List<DiscogsPage<DiscogsLabelReleaseEntry>>> LabelReleases { get; } = new();
     public Dictionary<long, List<DiscogsPage<DiscogsMasterVersion>>> MasterVersions { get; } = new();
     public Dictionary<string, DiscogsImageBytes> Images { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, Exception> ImageErrors { get; } = new(StringComparer.Ordinal);
     public HashSet<long> NotFoundArtists { get; } = [];
     public HashSet<long> NotFoundLabels { get; } = [];
     public HashSet<long> NotFoundMasters { get; } = [];
@@ -93,6 +94,8 @@ internal sealed class FakeDiscogsClient : IDiscogsClient
     public Task<DiscogsImageBytes?> DownloadImageAsync(string signedUrl, CancellationToken ct = default)
     {
         ImageDownloadCalls++;
+        if (ImageErrors.TryGetValue(signedUrl, out var error))
+            return Task.FromException<DiscogsImageBytes?>(error);
         return Task.FromResult(Images.GetValueOrDefault(signedUrl));
     }
 

@@ -60,12 +60,12 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), new FakeIdentityDiscogsClient());
 
         var started = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: true, "admin");
-        var mid = await sut.RunBatchAsync(started.Id, batchSize: 2);
+        var mid = await sut.RunBatchAsync(owner, started.Id, batchSize: 2);
         Assert.Equal(2, mid.Processed);
         Assert.False(string.IsNullOrEmpty(mid.Cursor));
         Assert.Equal(nameof(CatalogBackfillStatus.Running), mid.Status);
 
-        var done = await sut.RunBatchAsync(started.Id, batchSize: 10);
+        var done = await sut.RunBatchAsync(owner, started.Id, batchSize: 10);
         Assert.Equal(3, done.Processed);
         Assert.Equal(nameof(CatalogBackfillStatus.Completed), done.Status);
     }
@@ -89,7 +89,7 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), new FakeIdentityDiscogsClient());
 
         var started = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        var paused = await sut.RunBatchAsync(started.Id, batchSize: 5);
+        var paused = await sut.RunBatchAsync(owner, started.Id, batchSize: 5);
 
         Assert.Equal(nameof(CatalogBackfillStatus.Paused), paused.Status);
         Assert.False(string.IsNullOrWhiteSpace(paused.LastError));
@@ -116,7 +116,7 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        await sut.RunBatchAsync(run.Id, batchSize: 10);
+        await sut.RunBatchAsync(owner, run.Id, batchSize: 10);
 
         await db.Entry(song).ReloadAsync();
         Assert.Equal(111, song.DiscogsReleaseId);
@@ -156,7 +156,7 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        await sut.RunBatchAsync(run.Id, 5);
+        await sut.RunBatchAsync(owner, run.Id, 5);
         await db.Entry(song).ReloadAsync();
         Assert.Equal(222, song.DiscogsReleaseId);
 
@@ -188,7 +188,7 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, fetcher, new FakeImages(), new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(ownerA, CatalogBackfillKind.LibraryAlbums, dryRun: false, "admin");
-        await sut.RunBatchAsync(run.Id, 20);
+        await sut.RunBatchAsync(ownerA, run.Id, 20);
 
         await db.Entry(songA).ReloadAsync();
         await db.Entry(songB).ReloadAsync();
@@ -215,8 +215,8 @@ public class CatalogBackfillServiceTests
         var sut = new CatalogBackfillService(db, identity, new FakeCatalogFetcher(), new FakeImages(), discogs);
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.LibraryAlbums, dryRun: true, "admin");
-        var first = await sut.RunBatchAsync(run.Id, batchSize: 1);
-        var second = await sut.RunBatchAsync(run.Id, batchSize: 10);
+        var first = await sut.RunBatchAsync(owner, run.Id, batchSize: 1);
+        var second = await sut.RunBatchAsync(owner, run.Id, batchSize: 10);
 
         Assert.Equal(1, first.RequestsUsed);
         Assert.Equal(2, second.RequestsUsed);
@@ -235,7 +235,7 @@ public class CatalogBackfillServiceTests
             new FakeImages { Throw = new IOException("Read-only file system") }, new FakeIdentityDiscogsClient());
 
         var run = await sut.StartAsync(owner, CatalogBackfillKind.Images, dryRun: false, "admin");
-        var paused = await sut.RunBatchAsync(run.Id, batchSize: 5);
+        var paused = await sut.RunBatchAsync(owner, run.Id, batchSize: 5);
 
         Assert.Equal(nameof(CatalogBackfillStatus.Paused), paused.Status);
         Assert.Equal("Read-only file system", paused.LastError);

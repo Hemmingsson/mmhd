@@ -109,11 +109,97 @@ public class DiscogsEnrichmentProviderTests
     }
 
     [Fact]
+    public void ToResult_PrefersLibraryAlbumArtistOverFeaturedReleaseCredit()
+    {
+        var song = Song();
+        song.AlbumArtist = "Main Artist";
+        var release = new DiscogsRelease(
+            900,
+            "Album",
+            Artists:
+            [
+                new DiscogsArtistRef(901, "Guest Artist"),
+                new DiscogsArtistRef(902, "Main Artist"),
+            ],
+            Tracklist: [new DiscogsTrack("1", "track", "Xtal")]);
+        var match = new DiscogsAlbumMatch(
+            new DiscogsDocument<DiscogsRelease>(release, "{}"),
+            null,
+            0.9,
+            "test",
+            EditionExact: false);
+
+        var result = DiscogsEnrichmentProvider.ToResult(song, match);
+
+        Assert.Equal("Main Artist", result.AlbumArtist);
+        Assert.Equal(902, result.DiscogsArtistId);
+    }
+
+    [Fact]
+    public void ToResult_KeepsVariousArtistsAsAlbumArtist()
+    {
+        var song = Song();
+        song.Artist = "Autechre";
+        song.AlbumArtist = "Various Artists";
+        var release = new DiscogsRelease(
+            903,
+            "Compilation",
+            Artists:
+            [
+                new DiscogsArtistRef(DiscogsReleaseMatcher.VariousArtistsId, "Various"),
+                new DiscogsArtistRef(904, "Autechre"),
+            ],
+            Tracklist: [new DiscogsTrack("1", "track", "Xtal")]);
+        var match = new DiscogsAlbumMatch(
+            new DiscogsDocument<DiscogsRelease>(release, "{}"),
+            null,
+            0.9,
+            "test",
+            EditionExact: false);
+
+        var result = DiscogsEnrichmentProvider.ToResult(song, match);
+
+        Assert.Equal("Autechre", result.Artist);
+        Assert.Equal("Various Artists", result.AlbumArtist);
+        Assert.Equal(DiscogsReleaseMatcher.VariousArtistsId, result.DiscogsArtistId);
+    }
+
+    [Fact]
     public async Task RateLimit_IsReportedAsRateLimited()
     {
         var client = new FixtureDiscogsClient { RateLimited = true };
         var outcome = await Provider(client, out _).TryEnrichAsync(Song());
         Assert.Equal(TimeSpan.FromSeconds(30), Assert.IsType<ProviderRateLimited>(outcome).RetryAfter);
+    }
+
+    [Fact]
+    public async Task NearlySpentAllowance_IsRateLimitedWithoutCallingTheClient()
+    {
+        var client = new FixtureDiscogsClient
+        {
+            LastRateLimit = new DiscogsRateLimitSnapshot(60, 57, 3, DateTime.UtcNow.AddSeconds(-10)),
+        };
+
+        var outcome = await Provider(client, out _).TryEnrichAsync(Song());
+
+        var retryAfter = Assert.IsType<ProviderRateLimited>(outcome).RetryAfter;
+        Assert.InRange(retryAfter, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
+        Assert.Empty(client.Calls);
+    }
+
+    [Theory]
+    [InlineData(6, -10)]  // above the reserve
+    [InlineData(0, -61)]  // spent, but over a minute ago: the window has moved on
+    [InlineData(null, -1)] // no remaining header
+    public async Task AllowanceThatIsNotNearlySpent_StillCallsTheClient(int? remaining, int observedSecondsAgo)
+    {
+        var client = new FixtureDiscogsClient
+        {
+            LastRateLimit = new DiscogsRateLimitSnapshot(60, null, remaining, DateTime.UtcNow.AddSeconds(observedSecondsAgo)),
+        };
+
+        Assert.IsType<ProviderMatched>(await Provider(client, out _).TryEnrichAsync(Song()));
+        Assert.NotEmpty(client.Calls);
     }
 
     [Fact]
@@ -275,7 +361,7 @@ public class DiscogsEnrichmentProviderTests
 
         public bool IsEnabled => true;
         public bool IsAuthenticated => Authenticated;
-        public DiscogsRateLimitSnapshot? LastRateLimit => null;
+        public DiscogsRateLimitSnapshot? LastRateLimit { get; init; }
 
         public Task<DiscogsDocument<DiscogsArtist>?> GetArtistAsync(long id, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<DiscogsDocument<DiscogsLabel>?> GetLabelAsync(long id, CancellationToken ct = default) => throw new NotSupportedException();

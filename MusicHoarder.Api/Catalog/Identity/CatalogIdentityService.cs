@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Enrichment;
+using MusicHoarder.Api.Enrichment.Providers;
+using MusicHoarder.Api.Library;
+using MusicHoarder.Api.Metadata;
 using MusicHoarder.Api.Options;
 using MusicHoarder.Api.Persistence;
 
@@ -39,20 +42,33 @@ public sealed class CatalogIdentityService(
         var songs = await LoadArtistSongsAsync(ownerId, display, ct);
         var changeSource = await ResolveChangeSourceAsync(runId, ct);
 
-        // 1) MusicBrainz artist url-rels
-        foreach (var mbid in CollectArtistMbids(songs))
+        // 1) MusicBrainz artist url-rels; accepted only while every subject MBID agrees on one Discogs artist
+        var relationHits = new List<(string Mbid, string Url, long DiscogsId)>();
+        foreach (var mbid in CollectArtistMbids(songs, key))
         {
             var rels = await musicBrainz.GetArtistUrlRelationsAsync(mbid, ct);
             foreach (var rel in rels.Where(r => string.Equals(r.Type, "discogs", StringComparison.OrdinalIgnoreCase)))
             {
                 if (!DiscogsUrl.TryParse(rel.Url, out var kind, out var id) || kind != DiscogsResourceKind.Artist)
                     continue;
-
-                return await AcceptArtistAsync(
-                    ownerId, key, display, id, CatalogIdentityMethod.MusicBrainzRelation, 1.0,
-                    Evidence(new { mbid, url = rel.Url, discogsId = id }),
-                    runId, dryRun, changeSource, ct);
+                relationHits.Add((mbid, rel.Url, id));
             }
+        }
+
+        var relationTargets = relationHits.GroupBy(h => h.DiscogsId).ToList();
+        if (relationTargets.Count == 1)
+        {
+            var (mbid, url, id) = relationHits[0];
+            return await AcceptArtistAsync(
+                ownerId, key, display, id, CatalogIdentityMethod.MusicBrainzRelation, 1.0,
+                Evidence(new { mbid, url, discogsId = id }),
+                runId, dryRun, changeSource, ct);
+        }
+
+        if (relationTargets.Count > 1)
+        {
+            await RecordConflictingRelationsAsync(ownerId, key, display, relationTargets, runId, ct);
+            return await BuildViewAsync(ownerId, CatalogIdentitySubject.LibraryArtist, key, display, ct);
         }
 
         // 2) Linked releases: majority of this artist's resolved albums share one Discogs artist id
@@ -218,7 +234,10 @@ public sealed class CatalogIdentityService(
                 var page = await discogs.SearchAsync(new DiscogsSearchQuery(Type: "release", Barcode: barcode), page: 1, perPage: 10, ct);
                 foreach (var hit in page.Items.Where(i => string.Equals(i.Type, "release", StringComparison.OrdinalIgnoreCase)))
                 {
-                    var conf = Math.Max(0.95, DiscogsMatchScoring.ScoreSearchHit(hint, hit));
+                    if (!DiscogsMatchScoring.SearchHitBarcodeMatches(hint, hit)
+                        || CorroboratedSearchHitScore(hint, hit) is not double score)
+                        continue;
+                    var conf = Math.Max(0.95, score);
                     candidates.Add((hit.Id, hit.MasterId, hit.Title, CatalogIdentityMethod.Barcode, conf,
                         Evidence(new { barcode, discogsId = hit.Id, title = hit.Title })));
                 }
@@ -234,7 +253,10 @@ public sealed class CatalogIdentityService(
                     new DiscogsSearchQuery(Type: "release", Label: label, Catno: catno), page: 1, perPage: 10, ct);
                 foreach (var hit in page.Items.Where(i => string.Equals(i.Type, "release", StringComparison.OrdinalIgnoreCase)))
                 {
-                    var conf = Math.Max(0.93, DiscogsMatchScoring.ScoreSearchHit(hint, hit));
+                    if (!DiscogsMatchScoring.SearchHitCatalogNumberMatches(hint, hit)
+                        || CorroboratedSearchHitScore(hint, hit) is not double score)
+                        continue;
+                    var conf = Math.Max(0.93, score);
                     candidates.Add((hit.Id, hit.MasterId, hit.Title, CatalogIdentityMethod.CatalogNumber, conf,
                         Evidence(new { label, catno, discogsId = hit.Id, title = hit.Title })));
                 }
@@ -402,11 +424,7 @@ public sealed class CatalogIdentityService(
     /// </summary>
     private async Task RevertAlbumAcceptanceAsync(Guid ownerId, CatalogIdentityDecision decision, DateTime now, CancellationToken ct)
     {
-        var songs = (await db.Songs
-                .IgnoreQueryFilters()
-                .Where(s => s.OwnerUserId == ownerId && s.Album != null)
-                .ToListAsync(ct))
-            .Where(s => DiscogsMatchScoring.AlbumSubjectKey(s.AlbumArtist ?? s.Artist ?? string.Empty, s.Album!) == decision.SubjectKey)
+        var songs = (await LoadAlbumSongsByKeyAsync(ownerId, decision.SubjectKey, includeDeleted: true, ct))
             .ToDictionary(s => s.Id);
         if (songs.Count == 0)
             return;
@@ -710,8 +728,15 @@ public sealed class CatalogIdentityService(
     private async Task<long?> TryLinkedReleasesArtistAsync(Guid ownerId, string artistName, CancellationToken ct)
     {
         var songs = await LoadArtistSongsAsync(ownerId, artistName, ct);
+        var subjectKey = DiscogsMatchScoring.ArtistSubjectKey(artistName);
+        if (DestinationPathResolver.IsVariousArtistsSentinel(artistName))
+            return null;
+
         var artistIds = songs
-            .Where(s => s.DiscogsArtistId is > 0 && s.DiscogsReleaseId is > 0)
+            .Where(s => CatalogKeys.NameKey(s.AlbumArtist) == subjectKey
+                && s.DiscogsArtistId is > 0
+                && s.DiscogsArtistId != DiscogsReleaseMatcher.VariousArtistsId
+                && s.DiscogsReleaseId is > 0)
             .GroupBy(s => DiscogsMatchScoring.AlbumSubjectKey(s.AlbumArtist ?? s.Artist ?? "", s.Album ?? ""))
             .Where(g => g.Key.Length > 1)
             .Select(g => g.Select(s => s.DiscogsArtistId!.Value).First())
@@ -829,29 +854,79 @@ public sealed class CatalogIdentityService(
             d.TargetName, d.Method.ToString(), d.Confidence, d.Status.ToString(), d.RunId,
             d.CreatedAtUtc, d.DecidedAtUtc, d.DecidedBy);
 
+    /// <summary>Read-only: the artist path never writes these rows, so they are not tracked.</summary>
     private async Task<List<SongMetadata>> LoadArtistSongsAsync(Guid ownerId, string artistName, CancellationToken ct)
     {
         var key = CatalogKeys.NameKey(artistName);
-        var songs = await db.Songs
+        var rows = await db.Songs
             .Where(s => s.OwnerUserId == ownerId && s.DeletedAtUtc == null)
+            .Select(s => new SongKeyRow(s.Id, s.AlbumArtist, s.Artist, s.Album))
             .ToListAsync(ct);
-        return songs
-            .Where(s => CatalogKeys.NameKey(s.AlbumArtist ?? s.Artist) == key
-                || CatalogKeys.NameKey(s.Artist) == key)
+        var ids = rows
+            .Where(r => CatalogKeys.NameKey(r.AlbumArtist ?? r.Artist) == key
+                || CatalogKeys.NameKey(r.Artist) == key)
+            .Select(r => r.Id)
             .ToList();
+        if (ids.Count == 0)
+            return [];
+
+        return await db.Songs
+            .AsNoTracking()
+            .Where(s => ids.Contains(s.Id))
+            .OrderBy(s => s.Id)
+            .ToListAsync(ct);
     }
 
-    private async Task<List<SongMetadata>> LoadAlbumSongsAsync(Guid ownerId, string albumArtist, string album, CancellationToken ct)
+    private Task<List<SongMetadata>> LoadAlbumSongsAsync(Guid ownerId, string albumArtist, string album, CancellationToken ct) =>
+        LoadAlbumSongsByKeyAsync(ownerId, DiscogsMatchScoring.AlbumSubjectKey(albumArtist, album), includeDeleted: false, ct);
+
+    /// <summary>
+    /// Album keys fold diacritics and strip punctuation, which SQL cannot reproduce, so keys are
+    /// computed in memory over a narrow untracked projection of the owner's songs; only the
+    /// album's own rows are then loaded tracked.
+    /// </summary>
+    private async Task<List<SongMetadata>> LoadAlbumSongsByKeyAsync(
+        Guid ownerId, string subjectKey, bool includeDeleted, CancellationToken ct)
     {
-        var artistKey = CatalogKeys.NameKey(albumArtist);
-        var albumKey = CatalogKeys.TitleKey(album);
-        var songs = await db.Songs
-            .Where(s => s.OwnerUserId == ownerId && s.DeletedAtUtc == null && s.Album != null)
+        var query = db.Songs
+            .IgnoreQueryFilters()
+            .Where(s => s.OwnerUserId == ownerId && s.Album != null);
+        if (!includeDeleted)
+            query = query.Where(s => s.DeletedAtUtc == null);
+
+        var rows = await query
+            .Select(s => new SongKeyRow(s.Id, s.AlbumArtist, s.Artist, s.Album))
             .ToListAsync(ct);
-        return songs
-            .Where(s => CatalogKeys.NameKey(s.AlbumArtist ?? s.Artist) == artistKey
-                && CatalogKeys.TitleKey(s.Album) == albumKey)
+        var ids = rows
+            .Where(r => DiscogsMatchScoring.AlbumSubjectKey(r.AlbumArtist ?? r.Artist ?? string.Empty, r.Album!) == subjectKey)
+            .Select(r => r.Id)
             .ToList();
+        if (ids.Count == 0)
+            return [];
+
+        return await db.Songs
+            .IgnoreQueryFilters()
+            .Where(s => ids.Contains(s.Id))
+            .OrderBy(s => s.Id)
+            .ToListAsync(ct);
+    }
+
+    private sealed record SongKeyRow(int Id, string? AlbumArtist, string? Artist, string? Album);
+
+    /// <summary>
+    /// Barcode and label+catno searches are fuzzy on Discogs, so a hit only earns its method's
+    /// confidence floor when its own title and artist agree with the library album.
+    /// </summary>
+    private static double? CorroboratedSearchHitScore(
+        DiscogsMatchScoring.LibraryAlbumHint hint,
+        DiscogsSearchResult hit,
+        bool requireBarcode = false,
+        bool requireCatalogNumber = false)
+    {
+        var score = DiscogsMatchScoring.ScoreSearchHit(hint, hit, requireBarcode, requireCatalogNumber);
+        if (score <= 0 || !DiscogsMatchScoring.SearchHitArtistMatches(hint, hit))
+            return null;
+        return score;
     }
 
     private static DiscogsMatchScoring.LibraryAlbumHint BuildAlbumHint(string albumArtist, string album, List<SongMetadata> songs) =>
@@ -864,21 +939,92 @@ public sealed class CatalogIdentityService(
             songs.Select(s => s.Label).FirstOrDefault(l => !string.IsNullOrWhiteSpace(l)),
             songs.Select(s => new DiscogsMatchScoring.LibraryTrack(s.Title ?? "", s.DurationSeconds)).ToList());
 
-    private static IEnumerable<string> CollectArtistMbids(List<SongMetadata> songs)
+    /// <summary>
+    /// MBIDs that identify the subject itself: the album artist's only when the album artist is the
+    /// subject (not Various Artists on a compilation), and from the per-artist list only the entry at
+    /// the subject's position (not a featured guest).
+    /// </summary>
+    private static IEnumerable<string> CollectArtistMbids(List<SongMetadata> songs, string subjectKey)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var song in songs)
         {
-            if (!string.IsNullOrWhiteSpace(song.AlbumArtistMusicBrainzId) && seen.Add(song.AlbumArtistMusicBrainzId))
-                yield return song.AlbumArtistMusicBrainzId!;
-            if (string.IsNullOrWhiteSpace(song.ArtistMusicBrainzIds))
-                continue;
-            foreach (var part in song.ArtistMusicBrainzIds.Split([';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (!string.IsNullOrWhiteSpace(song.AlbumArtistMusicBrainzId)
+                && CatalogKeys.NameKey(song.AlbumArtist) == subjectKey
+                && seen.Add(song.AlbumArtistMusicBrainzId.Trim()))
             {
-                if (seen.Add(part))
-                    yield return part;
+                yield return song.AlbumArtistMusicBrainzId.Trim();
             }
+
+            if (AlignedArtistMbid(song, subjectKey) is { } mbid && seen.Add(mbid))
+                yield return mbid;
         }
+    }
+
+    /// <summary>
+    /// The subject's entry in <see cref="SongMetadata.ArtistMusicBrainzIds"/>, which is positionally
+    /// aligned with <see cref="SongMetadata.Artists"/>. Lists of different lengths are not aligned.
+    /// </summary>
+    private static string? AlignedArtistMbid(SongMetadata song, string subjectKey)
+    {
+        var ids = MultiValue.Split(song.ArtistMusicBrainzIds);
+        if (ids.Length == 0)
+            return null;
+
+        var artists = MultiValue.Split(song.Artists);
+        if (artists.Length == 0)
+            return ids.Length == 1 && CatalogKeys.NameKey(song.Artist) == subjectKey ? ids[0] : null;
+        if (artists.Length != ids.Length)
+            return null;
+
+        var index = Array.FindIndex(artists, a => CatalogKeys.NameKey(a) == subjectKey);
+        return index < 0 ? null : ids[index];
+    }
+
+    private async Task RecordConflictingRelationsAsync(
+        Guid ownerId,
+        string key,
+        string display,
+        List<IGrouping<long, (string Mbid, string Url, long DiscogsId)>> targets,
+        int? runId,
+        CancellationToken ct)
+    {
+        await ClearOpenCandidatesAsync(ownerId, CatalogIdentitySubject.LibraryArtist, key, ct);
+        var totalMbids = targets.SelectMany(t => t.Select(h => h.Mbid)).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var ranked = targets
+            .Select(t => (DiscogsId: t.Key,
+                Mbids: t.Select(h => h.Mbid).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                Urls: t.Select(h => h.Url).Distinct(StringComparer.OrdinalIgnoreCase).ToList()))
+            .OrderByDescending(t => t.Mbids.Count)
+            .ThenBy(t => t.DiscogsId)
+            .Take(5);
+
+        foreach (var target in ranked)
+        {
+            db.CatalogIdentityDecisions.Add(new CatalogIdentityDecision
+            {
+                OwnerUserId = ownerId,
+                SubjectKind = CatalogIdentitySubject.LibraryArtist,
+                SubjectKey = key,
+                SubjectDisplay = display,
+                TargetKind = CatalogEntityKind.Artist,
+                DiscogsId = target.DiscogsId,
+                Method = CatalogIdentityMethod.MusicBrainzRelation,
+                Confidence = Math.Round(0.4 + 0.4 * target.Mbids.Count / totalMbids, 2),
+                Status = CatalogIdentityStatus.Candidate,
+                EvidenceJson = Evidence(new
+                {
+                    discogsId = target.DiscogsId,
+                    mbids = target.Mbids,
+                    urls = target.Urls,
+                    note = "conflicting-musicbrainz-relations",
+                }),
+                RunId = runId,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     private static string StripSearchArtistTitle(string? title)

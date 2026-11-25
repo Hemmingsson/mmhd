@@ -134,6 +134,57 @@ public class EnrichmentOrchestratorTests
     }
 
     [Fact]
+    public async Task ProcessSong_DiscogsBusyWithAnotherSong_SkipsDiscogsInsteadOfWaiting()
+    {
+        // Discogs is a slow, supporting source: a song must never queue behind another song's Discogs
+        // lookup. It is deferred as a rate-limited attempt the retry sweep picks up later.
+        await using var db = CreateDb();
+        var first = AddPendingSong(db, artist: "Daft Punk", title: "One More Time");
+        var second = AddPendingSong(db, artist: "Daft Punk", title: "Aerodynamic");
+        await db.SaveChangesAsync();
+
+        var acoustIdCalls = new List<int>();
+        var acoustId = new StubEnrichmentProvider("AcoustID", 100, canHandle: _ => true,
+            enrich: s =>
+            {
+                acoustIdCalls.Add(s.Id);
+                return Task.FromResult<ProviderOutcome>(new ProviderMatched(new EnrichmentProviderResult(
+                    "Daft Punk", "Daft Punk", s.Title!, null, null, $"mb-{s.Id}", null, null, $"acoust-{s.Id}", null,
+                    "AcoustID", 0.95, [], EnrichmentStatus.Matched)));
+            });
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var discogsCalls = new List<int>();
+        var discogs = new StubEnrichmentProvider("Discogs", 900, canHandle: _ => true,
+            enrich: async s =>
+            {
+                discogsCalls.Add(s.Id);
+                entered.TrySetResult();
+                await release.Task;
+                return new ProviderNoMatch();
+            });
+        var orchestrator = CreateOrchestratorWithProviders(db, [acoustId, discogs]);
+
+        var firstRun = orchestrator.ProcessSongAsync(first.Id);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var outcome = await orchestrator.ProcessSongAsync(second.Id).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(EnrichmentOutcome.Matched, outcome);
+        Assert.Equal([first.Id], discogsCalls);
+        Assert.Contains(second.Id, acoustIdCalls);
+        var deferred = second.ProviderAttempts.Single(a => a.Provider == EnrichmentProvider.Discogs);
+        Assert.Equal(ProviderAttemptStatus.RateLimited, deferred.Status);
+        Assert.True(deferred.RetryAfterUtc > DateTime.UtcNow);
+
+        release.SetResult();
+        await firstRun.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(
+            ProviderAttemptStatus.NoMatch,
+            first.ProviderAttempts.Single(a => a.Provider == EnrichmentProvider.Discogs).Status);
+    }
+
+    [Fact]
     public async Task ProcessSong_NoMatch_SetsNeedsReviewOrFailed()
     {
         await using var db = CreateDb();

@@ -26,6 +26,14 @@ public sealed class DiscogsEnrichmentProvider(
     /// <summary>Below this the candidate is kept for review history but laid over nothing.</summary>
     public const double MatchThreshold = 0.8;
 
+    /// <summary>
+    /// Requests left in the allowance at or below which a song skips Discogs rather than queue on the
+    /// client's request gate or its 429 retries. Discogs counts the allowance over a moving minute.
+    /// </summary>
+    public const int RateLimitReserve = 5;
+
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(60);
+
     public string Name => nameof(EnrichmentProvider.Discogs);
 
     /// <summary>After every voting provider: nothing it finds changes what they search for.</summary>
@@ -44,6 +52,13 @@ public sealed class DiscogsEnrichmentProvider(
         var albumArtist = string.IsNullOrWhiteSpace(song.AlbumArtist) ? song.Artist : song.AlbumArtist;
         if (string.IsNullOrWhiteSpace(albumArtist) || string.IsNullOrWhiteSpace(song.Album))
             return new ProviderNoMatch();
+
+        if (client.LastRateLimit is { Remaining: { } remaining } snapshot && remaining <= RateLimitReserve)
+        {
+            var windowLeft = snapshot.ObservedAtUtc + RateLimitWindow - DateTime.UtcNow;
+            if (windowLeft > TimeSpan.Zero)
+                return new ProviderRateLimited(windowLeft < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : windowLeft);
+        }
 
         DiscogsAlbumMatch? match;
         try
@@ -71,8 +86,12 @@ public sealed class DiscogsEnrichmentProvider(
     {
         var release = match.Release.Value;
         var master = match.Master?.Value;
-        var lead = (release.Artists ?? []).FirstOrDefault(a => a.Id != DiscogsReleaseMatcher.VariousArtistsId);
-        var artist = DiscogsReleaseMatcher.DisplayName(lead?.Name);
+        var isVarious = release.Artists?.Any(a => a.Id == DiscogsReleaseMatcher.VariousArtistsId) == true;
+        var lead = DiscogsReleaseMatcher.AlbumArtist(release.Artists, song.AlbumArtist ?? song.Artist);
+        var artist = isVarious
+            ? song.Artist
+            : DiscogsReleaseMatcher.DisplayName(lead?.Name);
+        var albumArtist = isVarious ? "Various Artists" : artist;
         var label = match.EditionExact ? release.Labels?.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l.Name)) : null;
         var catalogNumber = label?.Catno is { } catno && !string.Equals(catno.Trim(), "none", StringComparison.OrdinalIgnoreCase)
             ? catno.Trim()
@@ -96,7 +115,7 @@ public sealed class DiscogsEnrichmentProvider(
 
         return new EnrichmentProviderResult(
             Artist: artist,
-            AlbumArtist: artist,
+            AlbumArtist: albumArtist,
             Title: track?.Title ?? song.Title,
             Year: master?.Year ?? release.Year,
             TrackNumber: null,
@@ -116,7 +135,7 @@ public sealed class DiscogsEnrichmentProvider(
             Upc: barcode,
             DiscogsReleaseId: match.EditionExact ? release.Id : null,
             DiscogsMasterId: release.MasterId,
-            DiscogsArtistId: lead?.Id);
+            DiscogsArtistId: isVarious ? DiscogsReleaseMatcher.VariousArtistsId : lead?.Id);
     }
 
     /// <summary>Best effort: the catalog is a by-product here, never a reason to fail enrichment.</summary>

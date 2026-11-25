@@ -47,11 +47,12 @@ public sealed class CatalogBackfillService(
         return ToDto(run);
     }
 
-    public async Task<CatalogBackfillRunDto> RunBatchAsync(int runId, int batchSize, CancellationToken ct = default)
+    public async Task<CatalogBackfillRunDto> RunBatchAsync(
+        Guid ownerId, int runId, int batchSize, CancellationToken ct = default)
     {
         var run = await db.CatalogBackfillRuns
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(r => r.Id == runId, ct)
+            .FirstOrDefaultAsync(r => r.Id == runId && r.OwnerUserId == ownerId, ct)
             ?? throw new InvalidOperationException($"Backfill run {runId} not found.");
 
         if (run.Status is CatalogBackfillStatus.Completed or CatalogBackfillStatus.RolledBack or CatalogBackfillStatus.Cancelled)
@@ -60,34 +61,29 @@ public sealed class CatalogBackfillService(
         run.Status = CatalogBackfillStatus.Running;
         run.LastError = null;
         var budget = Math.Clamp(batchSize, 1, 100_000);
-        var processedThisBatch = 0;
+        var exhausted = true;
         // The client is shared, so requests other callers send during the batch count too.
         var requestsBefore = discogs.RequestsSent;
 
         try
         {
-            switch (run.Kind)
+            exhausted = run.Kind switch
             {
-                case CatalogBackfillKind.LibraryArtists:
-                    processedThisBatch = await ProcessLibraryArtistsAsync(run, budget, ct);
-                    break;
-                case CatalogBackfillKind.LibraryAlbums:
-                    processedThisBatch = await ProcessLibraryAlbumsAsync(run, budget, ct);
-                    break;
-                case CatalogBackfillKind.CatalogResources:
-                    processedThisBatch = await ProcessCatalogResourcesAsync(run, budget, ct);
-                    break;
-                case CatalogBackfillKind.Images:
-                    processedThisBatch = await ProcessImagesAsync(run, budget, ct);
-                    break;
-            }
+                CatalogBackfillKind.LibraryArtists => await ProcessLibraryArtistsAsync(run, budget, ct),
+                CatalogBackfillKind.LibraryAlbums => await ProcessLibraryAlbumsAsync(run, budget, ct),
+                CatalogBackfillKind.CatalogResources => await ProcessCatalogResourcesAsync(run, budget, ct),
+                CatalogBackfillKind.Images => await ProcessImagesAsync(run, budget, ct),
+                _ => true,
+            };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Rate limits and failures outside a single subject (an unwritable image directory, a
             // dropped connection) pause the run; the next batch resumes from the saved cursor.
             db.ChangeTracker.Clear();
-            run = await db.CatalogBackfillRuns.IgnoreQueryFilters().FirstAsync(r => r.Id == runId, ct);
+            run = await db.CatalogBackfillRuns
+                .IgnoreQueryFilters()
+                .FirstAsync(r => r.Id == runId && r.OwnerUserId == ownerId, ct);
             AddRequests(run, requestsBefore);
             run.Status = CatalogBackfillStatus.Paused;
             run.LastError = ex.Message;
@@ -98,17 +94,33 @@ public sealed class CatalogBackfillService(
 
         AddRequests(run, requestsBefore);
 
-        // Finished when this pass found nothing, or fewer subjects than the budget (end of the list).
-        if (run.Status == CatalogBackfillStatus.Running
-            && (processedThisBatch == 0 || processedThisBatch < budget))
+        if (run.Status == CatalogBackfillStatus.Running && exhausted)
         {
             run.Status = CatalogBackfillStatus.Completed;
             run.FinishedAtUtc = DateTime.UtcNow;
         }
 
-        run.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await SaveProgressAsync(run, ct);
         return ToDto(run);
+    }
+
+    /// <summary>
+    /// Saves the run's in-memory progress. A subject's ingest can clear the shared change tracker,
+    /// which detaches the run; the in-memory values are this batch's truth, so they are re-attached.
+    /// </summary>
+    private async Task SaveProgressAsync(CatalogBackfillRun run, CancellationToken ct)
+    {
+        run.UpdatedAtUtc = DateTime.UtcNow;
+        if (db.Entry(run).State == EntityState.Detached)
+        {
+            var tracked = db.ChangeTracker.Entries<CatalogBackfillRun>().FirstOrDefault(e => e.Entity.Id == run.Id);
+            if (tracked is null)
+                db.CatalogBackfillRuns.Update(run);
+            else
+                tracked.CurrentValues.SetValues(run);
+        }
+
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<CatalogBackfillRunDto?> RollbackAsync(Guid ownerId, int runId, CancellationToken ct = default)
@@ -175,12 +187,10 @@ public sealed class CatalogBackfillService(
         return rows.Select(ToDto).ToList();
     }
 
-    private async Task<int> ProcessLibraryArtistsAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
+    /// <returns>Whether the run has nothing left after this batch.</returns>
+    private async Task<bool> ProcessLibraryArtistsAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
     {
         var artists = await ListLibraryArtistsAsync(run.OwnerUserId, run.Cursor, budget, ct);
-        if (artists.Count == 0)
-            return 0;
-
         foreach (var artist in artists)
         {
             try
@@ -200,28 +210,21 @@ public sealed class CatalogBackfillService(
             }
             catch (Exception ex)
             {
-                run.Failed++;
-                run.Processed++;
-                run.LastError = ex.Message;
+                FailSubject(run, ex);
             }
 
             run.Cursor = DiscogsMatchScoring.ArtistSubjectKey(artist);
-            run.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
+            await SaveProgressAsync(run, ct);
         }
 
-        return artists.Count;
+        return artists.Count < budget;
     }
 
-    private async Task<int> ProcessLibraryAlbumsAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
+    private async Task<bool> ProcessLibraryAlbumsAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
     {
         var albums = await ListLibraryAlbumsAsync(run.OwnerUserId, run.Cursor, budget, ct);
-        if (albums.Count == 0)
-            return 0;
-
-        foreach (var (albumArtist, album) in albums)
+        foreach (var (albumArtist, album, unlinkedSongIds) in albums)
         {
-            var songsBefore = await CountSongsWithReleaseAsync(run.OwnerUserId, albumArtist, album, ct);
             try
             {
                 var view = await identity.ResolveAlbumAsync(run.OwnerUserId, albumArtist, album, run.Id, run.DryRun, ct);
@@ -229,8 +232,9 @@ public sealed class CatalogBackfillService(
                 if (view.Accepted is not null && !run.DryRun)
                 {
                     run.Linked++;
-                    var songsAfter = await CountSongsWithReleaseAsync(run.OwnerUserId, albumArtist, album, ct);
-                    run.SongsUpdated += Math.Max(0, songsAfter - songsBefore);
+                    run.SongsUpdated += await db.Songs
+                        .IgnoreQueryFilters()
+                        .CountAsync(s => unlinkedSongIds.Contains(s.Id) && s.DiscogsReleaseId != null, ct);
                 }
                 else if (view.Candidates.Count > 0 || (view.Accepted is not null && run.DryRun))
                     run.Candidates++;
@@ -243,78 +247,106 @@ public sealed class CatalogBackfillService(
             }
             catch (Exception ex)
             {
-                run.Failed++;
-                run.Processed++;
-                run.LastError = ex.Message;
+                FailSubject(run, ex);
             }
 
             run.Cursor = DiscogsMatchScoring.AlbumSubjectKey(albumArtist, album);
-            run.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
+            await SaveProgressAsync(run, ct);
         }
 
-        return albums.Count;
+        return albums.Count < budget;
     }
 
-    private async Task<int> ProcessCatalogResourcesAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
+    private void FailSubject(CatalogBackfillRun run, Exception ex)
+    {
+        // Drop whatever the failed subject left tracked so the progress save does not retry it.
+        db.ChangeTracker.Clear();
+        run.Failed++;
+        run.Processed++;
+        run.LastError = ex.Message;
+    }
+
+    private const string ReleasePhase = "r:";
+    private const string ArtistPhase = "a:";
+
+    /// <summary>
+    /// Refreshes stale releases, then stale artists, in Discogs id order. The cursor names the phase
+    /// (<c>r:123</c>, <c>a:45</c>); a bare number is a release cursor from before phases existed.
+    /// </summary>
+    private async Task<bool> ProcessCatalogResourcesAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var releases = await db.CatalogReleases
-            .Where(r => r.FetchState == CatalogFetchState.Fetched
-                && r.RefreshAfterUtc != null
-                && r.RefreshAfterUtc <= now)
-            .OrderBy(r => r.DiscogsId)
-            .Select(r => r.DiscogsId)
-            .ToListAsync(ct);
+        var (inArtistPhase, cursorId) = ParseResourceCursor(run.Cursor);
+        var remaining = budget;
 
-        var cursorId = long.TryParse(run.Cursor, out var c) ? c : 0;
-        var batch = releases.Where(id => id > cursorId).Take(budget).ToList();
-        if (batch.Count == 0)
+        if (!inArtistPhase)
         {
-            // Also refresh stale masters/artists lightly when no releases.
-            var artists = await db.CatalogArtists
-                .Where(a => a.RefreshAfterUtc != null && a.RefreshAfterUtc <= now)
-                .OrderBy(a => a.DiscogsId)
-                .Select(a => a.DiscogsId)
-                .Where(id => id > cursorId)
-                .Take(budget)
+            var releases = await db.CatalogReleases
+                .AsNoTracking()
+                .Where(r => r.FetchState == CatalogFetchState.Fetched
+                    && r.RefreshAfterUtc != null
+                    && r.RefreshAfterUtc <= now
+                    && r.DiscogsId > cursorId)
+                .OrderBy(r => r.DiscogsId)
+                .Select(r => r.DiscogsId)
+                .Take(remaining)
                 .ToListAsync(ct);
-            foreach (var id in artists)
+            foreach (var id in releases)
             {
-                await fetcher.EnsureArtistAsync(id, withDiscography: true, force: true, ct);
+                await fetcher.EnsureReleaseAsync(id, force: true, ct);
                 run.Processed++;
                 run.Linked++;
-                run.Cursor = id.ToString();
-                run.UpdatedAtUtc = DateTime.UtcNow;
-                await db.SaveChangesAsync(ct);
+                run.Cursor = ReleasePhase + id;
+                await SaveProgressAsync(run, ct);
             }
 
-            return artists.Count;
+            remaining -= releases.Count;
+            cursorId = 0;
         }
 
-        foreach (var id in batch)
+        if (remaining == 0)
+            return false;
+
+        var artists = await db.CatalogArtists
+            .AsNoTracking()
+            .Where(a => a.RefreshAfterUtc != null && a.RefreshAfterUtc <= now && a.DiscogsId > cursorId)
+            .OrderBy(a => a.DiscogsId)
+            .Select(a => a.DiscogsId)
+            .Take(remaining)
+            .ToListAsync(ct);
+        foreach (var id in artists)
         {
-            await fetcher.EnsureReleaseAsync(id, force: true, ct);
+            await fetcher.EnsureArtistAsync(id, withDiscography: true, force: true, ct);
             run.Processed++;
             run.Linked++;
-            run.Cursor = id.ToString();
-            run.UpdatedAtUtc = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
+            run.Cursor = ArtistPhase + id;
+            await SaveProgressAsync(run, ct);
         }
 
-        return batch.Count;
+        return artists.Count < remaining;
     }
 
-    private async Task<int> ProcessImagesAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
+    private static (bool ArtistPhase, long Id) ParseResourceCursor(string? cursor)
     {
-        var downloaded = await images.DownloadPendingAsync(budget, ct);
-        run.Processed += downloaded;
-        run.Linked += downloaded;
+        if (string.IsNullOrEmpty(cursor))
+            return (false, 0);
+        if (cursor.StartsWith(ArtistPhase, StringComparison.Ordinal))
+            return (true, long.TryParse(cursor.AsSpan(ArtistPhase.Length), out var a) ? a : 0);
+        if (cursor.StartsWith(ReleasePhase, StringComparison.Ordinal))
+            return (false, long.TryParse(cursor.AsSpan(ReleasePhase.Length), out var r) ? r : 0);
+        return (false, long.TryParse(cursor, out var legacy) ? legacy : 0);
+    }
+
+    private async Task<bool> ProcessImagesAsync(CatalogBackfillRun run, int budget, CancellationToken ct)
+    {
+        var downloadedBefore = await CountDownloadedImagesAsync(ct);
+        var attempted = await images.DownloadPendingAsync(budget, ct);
+        run.Processed += attempted;
+        run.Linked += Math.Clamp(await CountDownloadedImagesAsync(ct) - downloadedBefore, 0, attempted);
         run.Cursor = DateTime.UtcNow.Ticks.ToString();
-        run.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        // Nothing left when zero downloaded.
-        return downloaded;
+        await SaveProgressAsync(run, ct);
+        // Failed downloads count as attempted, so only an empty pass means nothing is pending.
+        return attempted == 0;
     }
 
     private async Task<List<string>> ListLibraryArtistsAsync(Guid ownerId, string? cursor, int take, CancellationToken ct)
@@ -340,49 +372,36 @@ public sealed class CatalogBackfillService(
         return artists.Take(take).ToList();
     }
 
-    private async Task<List<(string AlbumArtist, string Album)>> ListLibraryAlbumsAsync(
+    /// <summary>
+    /// The next albums with songs lacking a release id, each with those songs' ids, so the songs a
+    /// link newly fills can be counted by primary key.
+    /// </summary>
+    private async Task<List<(string AlbumArtist, string Album, List<int> UnlinkedSongIds)>> ListLibraryAlbumsAsync(
         Guid ownerId, string? cursor, int take, CancellationToken ct)
     {
         var songs = await db.Songs
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(s => s.OwnerUserId == ownerId && s.DeletedAtUtc == null && s.Album != null && s.DiscogsReleaseId == null)
-            .Select(s => new { s.AlbumArtist, s.Artist, s.Album })
+            .Select(s => new { s.Id, s.AlbumArtist, s.Artist, s.Album })
             .ToListAsync(ct);
 
-        var albums = songs
+        return songs
             .Select(s => (
+                s.Id,
                 AlbumArtist: (s.AlbumArtist ?? s.Artist)?.Trim() ?? "",
                 Album: s.Album!.Trim()))
-            .Where(a => a.AlbumArtist.Length > 0 && a.Album.Length > 0)
-            .DistinctBy(a => DiscogsMatchScoring.AlbumSubjectKey(a.AlbumArtist, a.Album), StringComparer.Ordinal)
-            .OrderBy(a => DiscogsMatchScoring.AlbumSubjectKey(a.AlbumArtist, a.Album), StringComparer.Ordinal)
+            .Where(s => s.AlbumArtist.Length > 0 && s.Album.Length > 0)
+            .GroupBy(s => DiscogsMatchScoring.AlbumSubjectKey(s.AlbumArtist, s.Album), StringComparer.Ordinal)
+            .Where(g => string.IsNullOrEmpty(cursor) || string.CompareOrdinal(g.Key, cursor) > 0)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Take(take)
+            .Select(g => (g.First().AlbumArtist, g.First().Album, g.Select(s => s.Id).ToList()))
             .ToList();
-
-        if (!string.IsNullOrEmpty(cursor))
-        {
-            albums = albums
-                .Where(a => string.CompareOrdinal(DiscogsMatchScoring.AlbumSubjectKey(a.AlbumArtist, a.Album), cursor) > 0)
-                .ToList();
-        }
-
-        return albums.Take(take).ToList();
     }
 
-    private async Task<int> CountSongsWithReleaseAsync(Guid ownerId, string albumArtist, string album, CancellationToken ct)
-    {
-        var artistKey = CatalogKeys.NameKey(albumArtist);
-        var albumKey = CatalogKeys.TitleKey(album);
-        var songs = await db.Songs
-            .AsNoTracking()
-            .IgnoreQueryFilters()
-            .Where(s => s.OwnerUserId == ownerId && s.DeletedAtUtc == null && s.DiscogsReleaseId != null)
-            .Select(s => new { s.AlbumArtist, s.Artist, s.Album })
-            .ToListAsync(ct);
-        return songs.Count(s =>
-            CatalogKeys.NameKey(s.AlbumArtist ?? s.Artist) == artistKey
-            && CatalogKeys.TitleKey(s.Album) == albumKey);
-    }
+    private Task<int> CountDownloadedImagesAsync(CancellationToken ct) =>
+        db.CatalogImages.CountAsync(i => i.Status == CatalogImageStatus.Downloaded, ct);
 
     private void AddRequests(CatalogBackfillRun run, long before) =>
         run.RequestsUsed += (int)Math.Clamp(discogs.RequestsSent - before, 0, int.MaxValue);

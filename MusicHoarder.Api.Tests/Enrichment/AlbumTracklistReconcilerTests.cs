@@ -110,6 +110,80 @@ public class AlbumTracklistReconcilerTests
             [new AlbumTracklistCandidate(EnrichmentProvider.Deezer, "id", "x", "y", 2000, null, [])]));
     }
 
+    [Fact]
+    public void Reconcile_DisagreeingDiscogsTracklist_DoesNotFlipTheWinningEdition()
+    {
+        // Deezer and Spotify each found a different album; on a tie of one provider each the earlier
+        // year wins. A Discogs listing of Deezer's album must not tip the vote, nor add its own slots.
+        var voting = new[]
+        {
+            Candidate(EnrichmentProvider.Deezer, "Homework", 2015, (1, 1, "A One", 200000, null)),
+            Candidate(EnrichmentProvider.SpotifyAPI, "Discovery", 2012,
+                (1, 1, "B One", 200000, null), (1, 2, "B Two", 210000, null)),
+        };
+        var discogs = Candidate(EnrichmentProvider.Discogs, "Homework", 2016,
+            (1, 1, "A One", 200000, null), (1, 2, "Vinyl Only", 300000, null), (1, 3, "Another", 300000, null));
+
+        var baseline = AlbumTracklistReconciler.Reconcile(voting);
+        var withDiscogs = AlbumTracklistReconciler.Reconcile([.. voting, discogs]);
+
+        Assert.Equal("Discovery", baseline!.Title);
+        AssertSameOutcome(baseline, withDiscogs!);
+        Assert.False(withDiscogs!.Sources.Single(s => s.Provider == EnrichmentProvider.Discogs).InWinningCluster);
+    }
+
+    [Fact]
+    public void Reconcile_DiscogsMissingADigitalOnlyTrack_DoesNotContestIt()
+    {
+        // MusicBrainz and Deezer agree on three tracks; the Discogs vinyl lacks the digital-only third.
+        var voting = new[] { Album(EnrichmentProvider.MusicBrainzWeb, "Album", 3), Album(EnrichmentProvider.Deezer, "Album", 3) };
+        var discogs = Album(EnrichmentProvider.Discogs, "Album", 2);
+
+        var baseline = AlbumTracklistReconciler.Reconcile(voting);
+        var withDiscogs = AlbumTracklistReconciler.Reconcile([.. voting, discogs]);
+
+        AssertSameOutcome(baseline!, withDiscogs!);
+        Assert.All(withDiscogs!.Tracks, t => Assert.False(t.IsContested));
+        Assert.False(withDiscogs.TrackCountContested);
+    }
+
+    [Fact]
+    public void Reconcile_AgreeingDiscogs_CorroboratesExistingSlotsOnly()
+    {
+        var voting = new[] { Album(EnrichmentProvider.MusicBrainzWeb, "Album", 2), Album(EnrichmentProvider.Deezer, "Album", 2) };
+        var discogs = Album(EnrichmentProvider.Discogs, "Album", 3);
+
+        var result = AlbumTracklistReconciler.Reconcile([.. voting, discogs]);
+
+        Assert.Equal(2, result!.Tracks.Count);
+        Assert.Equal(2, result.ResolvedTrackCount);
+        Assert.False(result.TrackCountContested);
+        Assert.All(result.Tracks, t => Assert.Contains(EnrichmentProvider.Discogs, t.CorroboratingProviders));
+        Assert.All(result.Tracks, t => Assert.False(t.IsContested));
+        Assert.True(result.Sources.Single(s => s.Provider == EnrichmentProvider.Discogs).InWinningCluster);
+    }
+
+    [Fact]
+    public void Reconcile_DiscogsAlone_IsNotACanonicalTracklist()
+        => Assert.Null(AlbumTracklistReconciler.Reconcile([Album(EnrichmentProvider.Discogs, "Album", 10)]));
+
+    private static void AssertSameOutcome(
+        AlbumTracklistReconciler.ReconciledTracklist expected, AlbumTracklistReconciler.ReconciledTracklist actual)
+    {
+        Assert.Equal(expected.Title, actual.Title);
+        Assert.Equal(expected.AlbumArtist, actual.AlbumArtist);
+        Assert.Equal(expected.Year, actual.Year);
+        Assert.Equal(expected.ResolvedTrackCount, actual.ResolvedTrackCount);
+        Assert.Equal(expected.TrackCountContested, actual.TrackCountContested);
+        Assert.Equal(
+            expected.Tracks.Select(t => (t.DiscNumber, t.TrackNumber, t.Title, t.DurationMs, t.IsContested)),
+            actual.Tracks.Select(t => (t.DiscNumber, t.TrackNumber, t.Title, t.DurationMs, t.IsContested)));
+        Assert.Equal(
+            expected.Tracks.Select(t => t.CorroboratingProviders.ToList()),
+            actual.Tracks.Select(t => t.CorroboratingProviders.Where(p => p != EnrichmentProvider.Discogs).ToList()));
+        Assert.Equal(expected.Sources, actual.Sources.Where(s => s.Provider != EnrichmentProvider.Discogs));
+    }
+
     private static AlbumTracklistCandidate Candidate(
         EnrichmentProvider source, string title, int year, params (int Disc, int Track, string Title, int Dur, string? Rec)[] tracks)
         => new(source, $"id-{source}", title, "Artist", year, null,

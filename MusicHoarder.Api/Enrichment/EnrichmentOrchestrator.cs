@@ -65,6 +65,8 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
 
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _providerSemaphores = new();
 
+    private static readonly TimeSpan SupportingProviderBusyRetry = TimeSpan.FromMinutes(1);
+
     public EnrichmentOrchestrator(
         IServiceScopeFactory scopeFactory,
         IEnumerable<IEnrichmentProvider> providers,
@@ -158,7 +160,25 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
             song.RecordEnrichmentAttempt();
 
             var semaphore = GetProviderSemaphore(provider.Name);
-            await semaphore.WaitAsync(ct);
+            // A supporting provider is never waited on: while another song holds it, this song skips
+            // it as rate-limited, which keeps nothing Pending and is picked up by the retry sweep.
+            if (FieldAuthority.IsSupporting(providerEnum))
+            {
+                if (!await semaphore.WaitAsync(TimeSpan.Zero, ct))
+                {
+                    _logger.LogDebug("Provider {Provider} busy, deferring it for {Track} (SongId={SongId})",
+                        provider.Name, song.TrackLabel, song.Id);
+                    UpsertAttempt(song, providerEnum, ProviderAttemptStatus.RateLimited,
+                        retryAfterUtc: DateTime.UtcNow + SupportingProviderBusyRetry, existingAttempts: existingAttempts,
+                        searchQuery: ProviderSearchQuery.For(providerEnum, song, _options.Value.SourceDirectory));
+                    continue;
+                }
+            }
+            else
+            {
+                await semaphore.WaitAsync(ct);
+            }
+
             try
             {
                 await PersistProviderOutcomeAsync(provider, providerEnum, song, existingAttempts, ct);
@@ -579,7 +599,7 @@ public class EnrichmentOrchestrator : IEnrichmentOrchestrator
         _providerSemaphores["Deezer"] = new SemaphoreSlim(opts.DeezerConcurrency, opts.DeezerConcurrency);
         _providerSemaphores["AppleMusic"] = new SemaphoreSlim(opts.AppleMusicConcurrency, opts.AppleMusicConcurrency);
         // The Discogs client paces itself (one shared request gate); one song at a time keeps the
-        // album cache effective for the album's next track.
+        // album cache effective for the album's next track. A song that finds it taken skips Discogs.
         _providerSemaphores["Discogs"] = new SemaphoreSlim(1, 1);
     }
 
