@@ -1,4 +1,10 @@
-# MusicHoarder
+# Mattias Music Hoarding Disorder
+
+MMHD is a Discogs-focused fork of [MusicHoarder](https://github.com/Jeffreyyvdb/MusicHoarder). It extends the self-hosted music library with a catalog of Discogs artists, labels, masters and releases, links between that catalog and your collection, and tools for reviewing matches and rolling back a backfill.
+
+Develop against the [MMHD fork](https://github.com/Hemmingsson/mmhd) as `origin`. Keep the original project as `upstream`. To bring in an upstream release, fetch its tags, merge the selected release on a sync branch, and test the library and catalog together before deploying.
+
+## MusicHoarder features
 
 **Fix your messy music library — automatically — then listen to it in an app that feels at home on
 your iPhone, your Android phone and your desktop.**
@@ -9,7 +15,7 @@ metadata, and builds a clean, consistently-organized copy — without ever touch
 Once it's clean, it's a full music player in the style of Apple Music: browse, play with synced
 lyrics, like, get stats, discover new playlists, and grow your library from Spotify or Soulseek.
 
-[![CI](https://github.com/Jeffreyyvdb/MusicHoarder/actions/workflows/ci.yml/badge.svg)](https://github.com/Jeffreyyvdb/MusicHoarder/actions/workflows/ci.yml)
+[![CI](https://github.com/Hemmingsson/mmhd/actions/workflows/ci.yml/badge.svg)](https://github.com/Hemmingsson/mmhd/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 If you've ever ended up with thousands of files like `track_047.mp3`, duplicate rips at different
