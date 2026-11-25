@@ -203,7 +203,9 @@
                 <li>
                   <span class="text-muted-foreground">{ext.provider}:</span>
                   {ext.externalId}
-                  <span class="text-muted-foreground text-footnote md:text-xs"> ({ext.source})</span>
+                  <span class="text-muted-foreground text-footnote md:text-xs">
+                    ({ext.source})</span
+                  >
                 </li>
               {/each}
             </ul>
@@ -230,7 +232,6 @@
             </ul>
           </section>
         {/if}
-
       </div>
     {:catch err}
       <PageToolbarV2
