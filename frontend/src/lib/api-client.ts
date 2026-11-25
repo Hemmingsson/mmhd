@@ -140,6 +140,8 @@ export interface ApiSong {
   lrclibId?: string | null;
   /** Genres, ';'-joined multi-value (e.g. "Hip Hop; Rap"). */
   genre?: string | null;
+  /** Original provider terms, separate from canonical genres; absent on older servers. */
+  tags?: string[];
   /** Full release date as an ISO string (YYYY-MM-DD or partial); {@link year} is the coarse form. */
   releaseDate?: string | null;
   /** Original (first) release date of the release-group, ISO string. */

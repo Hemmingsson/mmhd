@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { normalizeDiscogsGenres } from '#lib/library/discogs-genres.ts';
+  import { trackTags } from '#lib/library/track-tags.ts';
   import { labelHref, recordLabels } from '#lib/library/labels.ts';
   import {
     AlertCircle,
@@ -533,6 +535,7 @@
     extra: Partial<Row> = {}
   ): Row[] => (value && value.trim() ? [{ label, value: value.trim(), ...extra }] : []);
 
+  const tags = $derived(trackTags(song.tags));
   const songRows = $derived<Row[]>([
     { label: 'Title', value: trackTitle },
     { label: 'Artist', value: trackArtist, href: artistHref },
@@ -540,7 +543,10 @@
     { label: 'Track', value: `${trackN} of ${totalTracks}` },
     { label: 'Year', value: album.year != null ? String(album.year) : '—' },
     ...present('Release date', song.releaseDate ? formatReleaseDate(song.releaseDate) : null),
-    { label: 'Genre', value: song.genre ?? album.genre ?? '—' },
+    {
+      label: 'Genres & styles',
+      value: normalizeDiscogsGenres(song.genre ?? album.genre).join('; ') || '—'
+    },
     ...present('Composer', songDetail?.composer)
   ]);
   const releaseRows = $derived<Row[]>([
@@ -654,7 +660,16 @@
 >
   <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 md:px-4 lg:px-0">
     {#if section === 'details'}
-      <GroupedList.Section header="Song">{@render rows(songRows)}</GroupedList.Section>
+      <GroupedList.Section header="Song">
+        {@render rows(songRows)}
+        {#if tags.length}
+          <GroupedList.Row label="Tags">
+            <span class="text-subheadline text-muted-foreground break-words md:text-xs">
+              {tags.join('; ')}
+            </span>
+          </GroupedList.Row>
+        {/if}
+      </GroupedList.Section>
       {#if provenanceGroup}
         {@const fill = provenanceGroup.fill}
         <GroupedList.Section header="How it got here" footer={provenanceGroup.explanation}>
