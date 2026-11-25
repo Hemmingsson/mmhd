@@ -6,7 +6,9 @@ using MusicHoarder.Api.Auth.EndpointFilters;
 using MusicHoarder.Api.Catalog;
 using MusicHoarder.Api.Catalog.Query;
 using MusicHoarder.Api.Options;
+using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Persistence;
+using MusicHoarder.Api.Enrichment;
 
 namespace MusicHoarder.Api.Endpoints;
 
@@ -24,6 +26,8 @@ public static class CatalogEndpoints
         group.MapGet("/artists/{id:int}", GetArtist);
         group.MapGet("/labels", ListLabels);
         group.MapGet("/labels/{id:int}", GetLabel);
+        group.MapGet("/discogs/labels/{id:long:min(1)}/releases", ListDiscogsLabelReleases);
+        group.MapPost("/discogs/releases/{id:long:min(1)}/resolve", ResolveDiscogsRelease);
         group.MapGet("/masters", ListMasters);
         group.MapGet("/masters/{id:int}", GetMaster);
         group.MapGet("/releases", ListReleases);
@@ -58,6 +62,36 @@ public static class CatalogEndpoints
     {
         var dto = await catalog.GetLabelAsync(id, ct);
         return dto is null ? Results.NotFound() : Results.Ok(dto);
+    }
+
+    internal static async Task<IResult> ListDiscogsLabelReleases(long id, int page, IDiscogsClient client, MusicHoarderDbContext db, CancellationToken ct)
+    {
+        if (page < 1) return Results.BadRequest();
+        DiscogsPage<DiscogsLabelReleaseEntry>? result;
+        try
+        {
+            result = await client.GetLabelReleasesAsync(id, page, 100, ct);
+        }
+        catch (Exception ex) when (ex is DiscogsApiException or ProviderRateLimitedException)
+        {
+            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
+        if (result == null) return Results.NotFound();
+        var ids = result.Items.Select(e => e.Id).Distinct().ToArray();
+        var local = await db.CatalogReleases.Where(r => ids.Contains(r.DiscogsId))
+            .ToDictionaryAsync(r => r.DiscogsId, r => (int?)r.Id, ct);
+        var owned = (await db.Songs.Where(s => s.DeletedAtUtc == null && s.DiscogsReleaseId.HasValue
+                && ids.Contains(s.DiscogsReleaseId.Value)).Select(s => s.DiscogsReleaseId!.Value).Distinct().ToListAsync(ct)).ToHashSet();
+        var items = result.Items.Select(e => new CatalogDiscographyItemDto("release", null,
+            local.GetValueOrDefault(e.Id), e.Id, e.Title ?? "Untitled", e.Artist, e.Year, null,
+            e.Format, null, e.Catno, e.Thumb, owned.Contains(e.Id)));
+        return Results.Ok(new DiscogsPage<CatalogDiscographyItemDto>(result.Pagination, items.ToArray()));
+    }
+
+    internal static async Task<IResult> ResolveDiscogsRelease(long id, ICatalogFetcher fetcher, CancellationToken ct)
+    {
+        var release = await fetcher.EnsureReleaseAsync(id, ct: ct);
+        return release == null ? Results.NotFound() : Results.Ok(new { release.Id });
     }
 
     internal static async Task<IResult> ListMasters(

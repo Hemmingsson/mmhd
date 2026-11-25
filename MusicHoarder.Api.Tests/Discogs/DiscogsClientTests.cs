@@ -138,6 +138,24 @@ public class DiscogsClientTests
         Assert.NotNull(page);
         Assert.NotEmpty(page.Items);
         Assert.Contains("/labels/23528/releases", stub.Requests[0].Url, StringComparison.Ordinal);
+        Assert.Contains("sort=year&sort_order=desc", stub.Requests[0].Url, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Label_release_pages_are_cached_separately()
+    {
+        var stub = new StubDiscogsHandler();
+        var raw = DiscogsContractTests.Fixture("label-23528-releases-page1.json");
+        stub.EnqueueJson(raw);
+        stub.EnqueueJson(raw);
+        var client = CreateClient(stub, o => o.CacheMinutes = 60);
+
+        await client.GetLabelReleasesAsync(23528, page: 1, perPage: 100);
+        await client.GetLabelReleasesAsync(23528, page: 1, perPage: 100);
+        await client.GetLabelReleasesAsync(23528, page: 2, perPage: 100);
+
+        Assert.Equal(2, stub.SendCount);
+        Assert.Contains("page=2", stub.Requests[1].Url, StringComparison.Ordinal);
     }
 
     [Fact]

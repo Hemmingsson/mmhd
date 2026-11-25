@@ -1,26 +1,20 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { ExternalLink } from '@lucide/svelte';
-  import { fetchCatalogLabel } from '#lib/catalog/api.ts';
-  import CatalogImageGallery from '#lib/catalog/components/CatalogImageGallery.svelte';
-  import CatalogReleaseCard from '#lib/catalog/components/CatalogReleaseCard.svelte';
-  import type { CatalogDiscographyItemDto, CatalogLabelDetailDto } from '#lib/catalog/types.ts';
+  import { catalogImageSrc, fetchCatalogLabel } from '#lib/catalog/api.ts';
+  import DiscogsEditions from '#lib/catalog/components/DiscogsEditions.svelte';
+  import type { CatalogLabelDetailDto } from '#lib/catalog/types.ts';
   import { Button } from '#lib/components/ui/button/index.ts';
   import { ScrollArea } from '#lib/components/ui/scroll-area/index.ts';
   import { Skeleton } from '#lib/components/ui/skeleton/index.ts';
   import PageToolbarV2 from '#lib/components/v2/PageToolbarV2.svelte';
+  import { profileParts } from '#lib/library/library-profile.ts';
   import { tabMemory } from '#lib/stores/tab-memory.svelte.ts';
 
   const id = $derived(Number(page.params.id));
   const detailPromise = $derived(
     Number.isFinite(id) ? fetchCatalogLabel(id) : Promise.reject(new Error('Invalid label id'))
   );
-
-  function hrefFor(item: CatalogDiscographyItemDto): string {
-    if (item.kind === 'master' && item.masterId != null) return `/catalog/masters/${item.masterId}`;
-    if (item.releaseId != null) return `/catalog/releases/${item.releaseId}`;
-    return '/catalog?tab=releases';
-  }
 
   function remember(detail: CatalogLabelDetailDto) {
     tabMemory.setTitle(page.url, detail.name);
@@ -43,6 +37,8 @@
       </div>
     {:then raw}
       {@const detail = remember(raw)}
+      {@const logo = detail.images.find((image) => image.type === 'primary') ?? detail.images[0]}
+      {@const logoUrl = logo ? catalogImageSrc(logo, false) : null}
       <PageToolbarV2
         title={detail.name}
         meta={`${detail.releaseTotal} release${detail.releaseTotal === 1 ? '' : 's'}`}
@@ -50,9 +46,51 @@
         grouped
       />
       <div class="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pb-10 md:px-7">
-        <CatalogImageGallery images={detail.images} />
+        {#if logoUrl}
+          <img
+            src={logoUrl}
+            alt={detail.name + ' logo'}
+            class="max-h-36 max-w-36 self-start object-contain"
+          />
+        {/if}
         {#if detail.profile}
-          <p class="text-body whitespace-pre-wrap md:text-sm">{detail.profile}</p>
+          <p class="text-body whitespace-pre-wrap md:text-sm">
+            {#each profileParts(detail.profile) as part, i (i)}{#if part.href}<a
+                  href={part.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  class="text-primary hover:underline">{part.text}</a
+                >{:else}{part.text}{/if}{/each}
+          </p>
+        {/if}
+        {#if detail.urls.length > 0}
+          <section>
+            <ul class="flex flex-col gap-1">
+              {#each detail.urls as u (u.url)}
+                <li>
+                  <a
+                    href={u.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-primary text-subheadline inline-flex items-center gap-1 hover:underline md:text-sm"
+                  >
+                    {u.kind || u.url}
+                    <ExternalLink class="size-3.5" aria-hidden="true" />
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          </section>
+        {/if}
+        {#if detail.discogsUri}
+          <a
+            href={detail.discogsUri}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary text-subheadline inline-flex items-center gap-1 hover:underline md:text-sm"
+          >
+            Discogs <ExternalLink class="size-3.5" aria-hidden="true" />
+          </a>
         {/if}
         {#if detail.contactInfo}
           <p class="text-muted-foreground text-footnote whitespace-pre-wrap md:text-xs">
@@ -89,46 +127,10 @@
             </ul>
           </section>
         {/if}
-        {#if detail.urls.length > 0}
-          <section>
-            <h2 class="text-title-2 mb-2 md:text-lg">Links</h2>
-            <ul class="flex flex-col gap-1">
-              {#each detail.urls as u (u.url)}
-                <li>
-                  <a
-                    href={u.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-primary text-subheadline inline-flex items-center gap-1 hover:underline md:text-sm"
-                  >
-                    {u.kind || u.url}
-                    <ExternalLink class="size-3.5" aria-hidden="true" />
-                  </a>
-                </li>
-              {/each}
-            </ul>
-          </section>
-        {/if}
-        {#if detail.discogsUri}
-          <a
-            href={detail.discogsUri}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary text-subheadline inline-flex items-center gap-1 hover:underline md:text-sm"
-          >
-            Discogs <ExternalLink class="size-3.5" aria-hidden="true" />
-          </a>
-        {/if}
-        <section aria-labelledby="label-releases">
-          <h2 id="label-releases" class="text-title-2 mb-2 md:text-lg">Releases</h2>
-          <ul class="flex flex-col">
-            {#each detail.releases as item (item.kind + ':' + (item.releaseId ?? item.masterId ?? item.discogsId))}
-              <li>
-                <CatalogReleaseCard {item} href={hrefFor(item)} />
-              </li>
-            {/each}
-          </ul>
-        </section>
+        {#key detail.discogsId}<DiscogsEditions
+            id={detail.discogsId}
+            cached={detail.releases}
+          />{/key}
       </div>
     {:catch err}
       <PageToolbarV2

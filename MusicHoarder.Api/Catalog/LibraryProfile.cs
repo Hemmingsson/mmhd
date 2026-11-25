@@ -13,7 +13,7 @@ internal sealed record ProfileLink(string Name, string Url);
 internal sealed record LibraryProfile(
     string Name, string? Profile, string? Country, string? RealName, string? Image,
     ProfileLink? Parent, IReadOnlyList<ProfileLink> Aliases, IReadOnlyList<ProfileLink> Groups,
-    IReadOnlyList<string> Variations, IReadOnlyList<string> Links, string? DiscogsUrl);
+    IReadOnlyList<string> Variations, IReadOnlyList<string> Links, string? DiscogsUrl, long? DiscogsId = null);
 
 internal static partial class LibraryProfiles
 {
@@ -48,7 +48,7 @@ internal static partial class LibraryProfiles
     {
         if (string.IsNullOrWhiteSpace(profile)) return null;
         var countries = BasedIn().Matches(profile).Select(m => (m.Groups[2].Success ? m.Groups[2] : m.Groups[1]).Value.Trim())
-            .Select(place => CountryCodes.GetValueOrDefault(place)).OfType<string>().Distinct().ToArray();
+            .Select(place => CountryCodes.GetValueOrDefault(place.StartsWith("the ", StringComparison.OrdinalIgnoreCase) ? place[4..] : place)).OfType<string>().Distinct().ToArray();
         return countries.Length == 1 ? countries[0] : null;
     }
 
@@ -77,8 +77,20 @@ internal static partial class LibraryProfiles
         if (kind is not ("artist" or "label") || name.Length is 0 or > 512) return Results.BadRequest();
         var stored = kind == "label" ? await StoredLabelAsync(db, name, ct) : null;
         var fallback = new LibraryProfile(name, Field(stored, "description"), Field(stored, "country"),
-            null, Web(Field(stored, "image")), null, [], [], [], [], Web(Field(stored, "discogsUrl")));
+            null, null, null, [], [], [], [], Web(Field(stored, "discogsUrl")));
         long? id = long.TryParse(Field(stored, "discogsId"), out var labelId) ? labelId : null;
+        fallback = fallback with { DiscogsId = id };
+        if (kind == "label" && id == null)
+        {
+            var nameKey = CatalogKeys.NameKey(name);
+            var local = await db.CatalogLabels.AsNoTracking().Where(l => l.NameKey == nameKey).Take(2).ToListAsync(ct);
+            if (local.Count == 1)
+            {
+                id = local[0].DiscogsId;
+                fallback = fallback with { DiscogsId = id, Profile = local[0].Profile ?? fallback.Profile,
+                    DiscogsUrl = $"https://www.discogs.com/label/{id}" };
+            }
+        }
         if (kind == "artist")
         {
             var localId = await catalog.FindArtistForLibraryNameAsync(name, ct);
@@ -93,6 +105,7 @@ internal static partial class LibraryProfiles
                 id = UniqueExactId(result, kind, name);
             }
             if (id == null) return stored is null ? Results.NoContent() : Results.Ok(fallback);
+            fallback = fallback with { DiscogsId = id };
             var snapshot = await db.CatalogRawSnapshots.AsNoTracking()
                 .Where(s => s.ResourceKind == kind && s.DiscogsId == id)
                 .OrderByDescending(s => s.FetchedAtUtc).Select(s => s.PayloadJson).FirstOrDefaultAsync(ct);
@@ -101,7 +114,7 @@ internal static partial class LibraryProfiles
                 var label = snapshot == null ? (await discogs.GetLabelAsync(id.Value, ct))?.Value :
                     JsonSerializer.Deserialize<DiscogsLabel>(snapshot, DiscogsJson.Options);
                 if (label == null) return Results.Ok(fallback);
-                var country = fallback.Country;
+                var country = fallback.Country ?? CountryFromProfile(label.Profile);
                 if (string.IsNullOrWhiteSpace(country))
                 {
                     try
@@ -116,9 +129,9 @@ internal static partial class LibraryProfiles
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested) { }
                 }
                 return Results.Ok(fallback with {
-                    Country = country ?? CountryFromProfile(label.Profile),
+                    DiscogsId = id, Country = country,
                     Profile = label.Profile ?? fallback.Profile,
-                    Image = Portrait(label.Images) ?? fallback.Image,
+                    Image = Portrait(label.Images),
                     Parent = label.ParentLabel is { Id: > 0, Name: {} parent } p
                         ? new(parent, $"https://www.discogs.com/label/{p.Id}") : null,
                     Links = (label.Urls ?? []).Select(Web).OfType<string>().Distinct().ToArray(),
@@ -136,7 +149,7 @@ internal static partial class LibraryProfiles
         }
         catch (Exception ex) when (ex is DiscogsApiException or ProviderRateLimitedException)
         {
-            return stored != null ? Results.Ok(fallback) : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return stored != null || fallback.DiscogsId != null ? Results.Ok(fallback) : Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
     }
 }

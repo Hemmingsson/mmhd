@@ -1,14 +1,39 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using MusicHoarder.Api.Catalog;
+using MusicHoarder.Api.Catalog.Query;
+using MusicHoarder.Api.Tests.Catalog.Ingestion;
+using MusicHoarder.Api.Tests.Catalog.Identity;
 using MusicHoarder.Api.Discogs;
 
 namespace MusicHoarder.Api.Tests.Catalog;
 
 public class LibraryProfileTests
 {
+    [Fact]
+    public async Task LabelUsesConfirmedLocalIdentityWhenSearchIsUnavailable()
+    {
+        await using var db = CatalogTestKit.NewContext();
+        var graph = CatalogTestKit.SeedDiscogsOnlyRelease(db);
+        graph.Label.Profile = "Local biography";
+        await db.SaveChangesAsync();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+
+        var result = await LibraryProfiles.GetAsync("label", graph.Label.Name, db,
+            new CatalogQueryService(db), new FakeDiscogsClient { IsEnabled = false },
+            new FakeMusicBrainz(), cache, default);
+
+        var profile = Assert.IsType<LibraryProfile>(((IValueHttpResult)result).Value);
+        Assert.Equal(graph.Label.DiscogsId, profile.DiscogsId);
+        Assert.Equal("Local biography", profile.Profile);
+        Assert.Null(profile.Image);
+    }
+
     [Theory]
     [InlineData("Swedish independent label founded by [a=Example Artist] and based in Malmö, in the southern-most part of Sweden.", "SE")]
     [InlineData("Independent record label based in Germany.", "DE")]
     [InlineData("Based in Paris, France.", "FR")]
+    [InlineData("Based in the United States.", "US")]
     [InlineData("Based in Malmö.", null)]
     [InlineData("The founder toured in Sweden. Distributed in France.", null)]
     [InlineData("A label working with an artist based in Sweden.", null)]

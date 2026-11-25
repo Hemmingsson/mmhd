@@ -90,7 +90,7 @@ public sealed class DiscogsClient : IDiscogsClient
             return null;
 
         (page, perPage) = ClampPaging(page, perPage);
-        var path = $"labels/{id}/releases?page={page}&per_page={perPage}";
+        var path = $"labels/{id}/releases?page={page}&per_page={perPage}&sort=year&sort_order=desc";
         return await GetPageAsync<DiscogsLabelReleaseEntry>(path, "releases", "label_releases", ct).ConfigureAwait(false);
     }
 
@@ -228,6 +228,12 @@ public sealed class DiscogsClient : IDiscogsClient
     private async Task<DiscogsPage<T>?> GetPageAsync<T>(
         string relativePath, string itemsProperty, string resourceTag, CancellationToken ct)
     {
+        // Cache provider listings only; ownership is joined for the current user by the endpoint.
+        var cacheKey = $"discogs:page:{relativePath}";
+        var cacheMinutes = resourceTag == "label_releases" ? _options.CurrentValue.CacheMinutes : 0;
+        if (cacheMinutes > 0 && _cache.TryGetValue(cacheKey, out DiscogsPage<T>? cached) && cached is not null)
+            return cached;
+
         var response = await SendWithRetryAsync(BuildUri(relativePath), resourceTag, ct).ConfigureAwait(false);
         if (response is null)
             return null;
@@ -243,6 +249,8 @@ public sealed class DiscogsClient : IDiscogsClient
             EnsureSuccessOrThrow(response, resourceTag);
             var raw = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var page = ParsePage<T>(raw, itemsProperty);
+            if (cacheMinutes > 0)
+                _cache.Set(cacheKey, page, TimeSpan.FromMinutes(cacheMinutes));
             _metrics.RecordRequest(resourceTag, "ok");
             return page;
         }

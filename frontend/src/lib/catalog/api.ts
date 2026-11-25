@@ -9,6 +9,7 @@ import type {
   CatalogArtistCardDto,
   CatalogArtistDetailDto,
   CatalogAvailabilityDto,
+  CatalogDiscographyItemDto,
   CatalogBackfillRunDto,
   CatalogBackfillStartRequest,
   CatalogChooseRequest,
@@ -349,4 +350,15 @@ export function parseDiscogsRef(
   }
 
   return null;
+}
+
+export function labelEditions(id: number, page: number, signal: AbortSignal) {
+  return requestJson<{
+    pagination: { pages: number; items: number };
+    items: CatalogDiscographyItemDto[];
+  }>(`${BASE}/discogs/labels/${id}/releases?page=${page}`, { signal });
+}
+
+export function resolveDiscogsRelease(id: number) {
+  return requestJson<{ id: number }>(`${BASE}/discogs/releases/${id}/resolve`, { method: 'POST' });
 }

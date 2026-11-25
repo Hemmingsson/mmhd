@@ -1,7 +1,14 @@
 <script lang="ts">
+  import { SvelteMap } from 'svelte/reactivity';
   import { page } from '$app/state';
   import { isAdmin } from '#lib/auth/capabilities.ts';
-  import LibraryProfileV2 from '#lib/components/v2/LibraryProfileV2.svelte';
+  import DiscogsEditions from '#lib/catalog/components/DiscogsEditions.svelte';
+  import {
+    fetchLibraryProfile,
+    countryName,
+    profileParts,
+    type LibraryProfile
+  } from '#lib/library/library-profile.ts';
   import { groupByLabel, recordLabels } from '#lib/library/labels.ts';
   type Group = ReturnType<typeof groupByLabel>[number];
   type Album = Group['albums'][number];
@@ -38,10 +45,9 @@
     })
   );
   const visible = $derived(groups.filter((g) => key(g.name).includes(key(search))));
-  const artwork = (g: Group) =>
-    portraits[key(g.name)] || g.albums.find((a) => a.coverUrl)?.coverUrl;
+  const artwork = (g: Group) => portraits[key(g.name)];
   const tracks = $derived.by(() => {
-    const result = new Map<number, { song: Album['songs'][number]; album: Album }>();
+    const result = new SvelteMap<number, { song: Album['songs'][number]; album: Album }>();
     for (const album of selected?.albums ?? []) {
       for (const song of album.songs) {
         if (
@@ -56,16 +62,51 @@
     return [...result.values()];
   });
   const artists = $derived.by(() => {
-    const names = new Map<string, string>();
+    const names = new SvelteMap<string, string>();
     for (const { song } of tracks) {
       for (const name of recordLabels(song.artists || song.artist)) names.set(key(name), name);
     }
     return [...names.values()].sort((a, b) => a.localeCompare(b));
   });
+  let attempt = $state(0);
+  const profile = $derived.by(() => {
+    void attempt;
+    return requested && isAdmin(page.data.user) ? fetchLibraryProfile('label', requested) : null;
+  });
 </script>
 
+{#snippet heading(name: string, data: LibraryProfile | null)}
+  <header>
+    {#if data?.image}<img class="logo" src={data.image} alt={name + ' logo'} />{/if}
+    <div>
+      <h1>{name}</h1>
+      {#if data?.country}<p>{countryName(data.country)}</p>{/if}
+      {#if data?.profile}<p class="bio">
+          {#each profileParts(data.profile) as part, i (i)}{#if part.href}<a
+                href={part.href}
+                target="_blank"
+                rel="noreferrer">{part.text}</a
+              >{:else}{part.text}{/if}{/each}
+        </p>{/if}
+      {#if data?.parent}<p>Parent label · <a href={data.parent.url}>{data.parent.name}</a></p>{/if}
+      {#if data}<div class="links">
+          {#if data.discogsUrl}<a href={data.discogsUrl} target="_blank" rel="noreferrer"
+              >Discogs ↗</a
+            >{/if}
+          {#each data.links as link (link)}<a href={link} target="_blank" rel="noreferrer"
+              >{new URL(link).hostname.replace(/^www\./, '')} ↗</a
+            >{/each}
+        </div>{/if}
+      {#if selected}<small
+          >{selected.albums.length} albums · {tracks.length} tracks · {artists.length} artists in your
+          library</small
+        >{/if}
+    </div>
+  </header>
+{/snippet}
+
 {#snippet image(name: string | null | undefined, url: string | null | undefined, circle: boolean)}
-  <span class="art" class:circle aria-hidden="true">
+  <span class={['art', { circle }]} aria-hidden="true">
     <span>{name?.trim().slice(0, 1) || '♪'}</span>
     {#if url}{#key url}<img
           src={url}
@@ -77,21 +118,21 @@
 {/snippet}
 
 <section class="label-page">
-  {#if loading && !groups.length}<p>Loading labels…</p>
-  {:else if error && !groups.length}<button onclick={retry}>Retry loading labels</button>
-  {:else if requested}
+  {#if requested}
     <a href="/labels">All labels</a>
+    {#await profile}
+      {@render heading(requested, null)}
+    {:then data}
+      {@render heading(requested, data)}
+      {#if data?.discogsId}{#key data.discogsId}<DiscogsEditions id={data.discogsId} />{/key}
+      {:else if isAdmin(page.data.user)}<p>No confirmed Discogs label.</p>{/if}
+    {:catch}
+      {@render heading(requested, null)}
+      <button onclick={() => attempt++}>Retry loading Discogs label</button>
+    {/await}
     {#if selected}
-      <header>
-        {@render image(selected.name, artwork(selected), true)}
-        <div>
-          <h1>{selected.name}</h1>
-          <p>{selected.albums.length} albums · {tracks.length} tracks · {artists.length} artists</p>
-        </div>
-      </header>
-      {#if isAdmin(page.data.user)}<LibraryProfileV2 kind="label" name={selected.name} />{/if}
       <div class="releases-heading">
-        <h2>Releases</h2>
+        <h2>In your library</h2>
         <label
           >Sort <select bind:value={sort}>
             <option value="newest">Newest first</option><option value="oldest">Oldest first</option
@@ -131,7 +172,11 @@
           <strong>{name}</strong>
         </a>
       {:else}<p>No credited artists.</p>{/each}
-    {:else}<p>No releases in your library have this label.</p>{/if}
+    {:else if loading}<p>Loading library…</p>{:else if error}<button onclick={retry}
+        >Retry loading library</button
+      >{:else}<p>No releases in your library have this label.</p>{/if}
+  {:else if loading && !groups.length}<p>Loading labels…</p>
+  {:else if error && !groups.length}<button onclick={retry}>Retry loading labels</button>
   {:else}
     <input
       type="search"
@@ -232,9 +277,25 @@
   .circle {
     border-radius: 50%;
   }
-  header .art {
+  header .logo {
+    object-fit: contain;
+    align-self: flex-start;
+    max-height: 9rem;
     width: clamp(5rem, 15vw, 9rem);
     font-size: 2rem;
+  }
+  .bio {
+    white-space: pre-line;
+    color: inherit;
+  }
+  header a {
+    color: var(--primary);
+    text-decoration: underline;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.75rem;
   }
   input {
     width: 100%;

@@ -15,6 +15,7 @@ export interface LibraryProfile {
   groups: ProfileLink[];
   variations: string[];
   links: string[];
+  discogsId: number | null;
   discogsUrl: string | null;
 }
 
