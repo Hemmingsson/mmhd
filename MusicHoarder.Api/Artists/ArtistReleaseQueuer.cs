@@ -73,12 +73,28 @@ public sealed class ArtistReleaseQueuer(
         if (detail is null || detail.Tracks.Count == 0 || string.IsNullOrWhiteSpace(detail.Title))
             return ReleaseQueueResult.Failed("The catalog did not return this release's tracklist.");
 
+        return await QueueTracklistAsync(ownerId, artistName, detail, EnrichmentProvider.Deezer, kind,
+            origin, trackBudget, requeueFailed, ct);
+    }
+
+    internal async Task<ReleaseQueueResult> QueueTracklistAsync(Guid ownerId, string artistName,
+        DeezerAlbumDetail detail, EnrichmentProvider provider, ArtistReleaseKinds kind,
+        WishlistItemOrigin origin, int trackBudget, bool requeueFailed, CancellationToken ct)
+    {
         var opts = options.Value;
         var now = DateTime.UtcNow;
         var albumArtist = string.IsNullOrWhiteSpace(detail.Artist) ? artistName : detail.Artist!;
-        var canonical = await UpsertCanonicalAsync(detail, albumArtist, now, ct);
+        var canonical = await UpsertCanonicalAsync(detail, albumArtist, provider, now, ct);
 
-        var orderedTracks = canonical.Tracks.OrderBy(t => t.DiscNumber).ThenBy(t => t.TrackNumber).ToList();
+        // The library groups pressings by album key. An explicit Discogs request may name a
+        // different tracklist than the canonical row; match and queue the requested pressing.
+        var orderedTracks = provider == EnrichmentProvider.Discogs
+            ? detail.Tracks.Select((t, index) => new CanonicalAlbumTrack
+            {
+                Id = index + 1, DiscNumber = t.DiscNumber, TrackNumber = t.TrackNumber,
+                Title = t.Title, DurationMs = t.DurationMs
+            }).ToList()
+            : canonical.Tracks.OrderBy(t => t.DiscNumber).ThenBy(t => t.TrackNumber).ToList();
 
         // What the owner has: the album's own tracks (under its album key), and for a single or an EP
         // anything of the artist's by that title — a single is usually a cut of an album already owned.
@@ -221,7 +237,7 @@ public sealed class ArtistReleaseQueuer(
     /// because a deluxe request must not be cut down to the standard tracklist.
     /// </summary>
     private async Task<CanonicalAlbum> UpsertCanonicalAsync(
-        DeezerAlbumDetail detail, string albumArtist, DateTime now, CancellationToken ct)
+        DeezerAlbumDetail detail, string albumArtist, EnrichmentProvider provider, DateTime now, CancellationToken ct)
     {
         var artistKey = TitleNormalizer.NormalizeForSearch(albumArtist);
         var albumKey = TitleNormalizer.NormalizeForSearch(detail.Title);
@@ -250,7 +266,7 @@ public sealed class ArtistReleaseQueuer(
         row.ResolvedTrackCount = detail.Tracks.Count;
         row.TrackCountContested = false;
         row.SourcesJson = CanonicalAlbumSources.Serialize(
-            [new AlbumTracklistReconciler.ReconciledSource(EnrichmentProvider.Deezer, detail.Id, detail.Tracks.Count, true)]);
+            [new AlbumTracklistReconciler.ReconciledSource(provider, detail.Id, detail.Tracks.Count, true)]);
         row.Status = CanonicalAlbumStatus.Fetched;
         row.FetchedAtUtc = now;
         row.NextRetryAfterUtc = null;
@@ -263,7 +279,7 @@ public sealed class ArtistReleaseQueuer(
                 TrackNumber = t.TrackNumber,
                 Title = t.Title,
                 DurationMs = t.DurationMs > 0 ? t.DurationMs : null,
-                CorroboratingProviders = nameof(EnrichmentProvider.Deezer),
+                CorroboratingProviders = provider.ToString(),
                 CorroborationCount = 1,
             });
         }

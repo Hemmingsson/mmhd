@@ -79,7 +79,7 @@ public sealed class CatalogAcquisitionService(
     }
 
     public async Task<CatalogAcquireResultDto> AcquireAsync(
-        Guid ownerId, int releaseId, string? providerEditionId, CancellationToken ct = default)
+        Guid ownerId, int releaseId, string? providerEditionId, CancellationToken ct = default, int? remainingBudget = null)
     {
         var release = await LoadReleaseAsync(releaseId, ct);
         if (release is null)
@@ -93,7 +93,7 @@ public sealed class CatalogAcquisitionService(
 
         if (ownership.OwnedSongs > 0 && trackCount > 0 && ownership.OwnedSongs >= trackCount)
         {
-            return new CatalogAcquireResultDto("already-owned", 0, null, "Every track of this release is already owned.", purchaseLinks);
+            return new CatalogAcquireResultDto("already-owned", 0, null, "Every track of this release is already owned.", purchaseLinks, ownership.OwnedSongs);
         }
 
         var editions = await ScoreEditionsAsync(release, ct);
@@ -129,7 +129,7 @@ public sealed class CatalogAcquisitionService(
                 .OrderBy(c => c.Sequence).Select(c => c.Name).FirstOrDefault()
             ?? "Unknown";
         var kind = KindFromRelease(release);
-        var budget = Math.Max(1, options.Value.ArtistRequestMaxTracks);
+        var budget = Math.Clamp(remainingBudget ?? int.MaxValue, 0, Math.Max(1, options.Value.ArtistRequestMaxTracks));
 
         var result = await queuer.QueueAsync(
             ownerId,
@@ -146,7 +146,7 @@ public sealed class CatalogAcquisitionService(
             result.Queued + result.Requeued,
             chosen.EditionId,
             result.Error,
-            purchaseLinks);
+            purchaseLinks, result.AlreadyOwned, result.AlreadyQueued, result.Capped);
     }
 
     private async Task<CatalogRelease?> LoadReleaseAsync(int releaseId, CancellationToken ct) =>
@@ -345,7 +345,7 @@ public sealed class CatalogAcquisitionService(
         return CatalogPurchaseLinks.Build(release.DiscogsId, urls);
     }
 
-    private static ArtistReleaseKinds KindFromRelease(CatalogRelease release)
+    internal static ArtistReleaseKinds KindFromRelease(CatalogRelease release)
     {
         // Whole words only: format text such as "Repress" or "Deep Cuts" must not read as an EP.
         foreach (var format in release.Formats)

@@ -120,5 +120,5 @@ public interface ICatalogQueryService
 public interface ICatalogAcquisitionService
 {
     Task<CatalogAvailabilityDto?> GetAvailabilityAsync(int releaseId, CancellationToken ct = default);
-    Task<CatalogAcquireResultDto> AcquireAsync(Guid ownerId, int releaseId, string? providerEditionId, CancellationToken ct = default);
+    Task<CatalogAcquireResultDto> AcquireAsync(Guid ownerId, int releaseId, string? providerEditionId, CancellationToken ct = default, int? remainingBudget = null);
 }

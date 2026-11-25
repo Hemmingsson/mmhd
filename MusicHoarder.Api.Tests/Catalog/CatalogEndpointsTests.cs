@@ -2,6 +2,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Artists;
+using MusicHoarder.Api.Jobs;
+using MusicHoarder.Api.Tests.Catalog.Identity;
+using MusicHoarder.Api.Tests.Artists;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using MusicHoarder.Api.Auth;
 using MusicHoarder.Api.Catalog;
 using MusicHoarder.Api.Catalog.Acquisition;
@@ -17,6 +22,44 @@ namespace MusicHoarder.Api.Tests.Catalog;
 
 public class CatalogEndpointsTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task LabelDownloadPersistsMissingTracksStartsWorkerAndDeduplicatesRepeats(bool providerMatch)
+    {
+        var user = new TestCurrentUserAccessor(TestCurrentUserAccessor.OwnerUser);
+        await using var db = CatalogTestKit.NewContext(user.UserId);
+        var graph = CatalogTestKit.SeedDiscogsOnlyRelease(db);
+        var fetcher = new FakeCatalogFetcher();
+        fetcher.Releases[graph.Release.DiscogsId] = graph.Release;
+        IDeezerCatalogService deezer = providerMatch ? new MatchingDeezer(graph) : new EmptyDeezer();
+        var options = Microsoft.Extensions.Options.Options.Create(ArtistTestKit.EnricherOptions());
+        var queuer = new ArtistReleaseQueuer(db, deezer, new ArtistTestKit.NoIdentities(), options,
+            NullLogger<ArtistReleaseQueuer>.Instance);
+        var acquisition = new CatalogAcquisitionService(db, deezer, new CatalogEditionQueuer(queuer), options);
+        var jobs = new JobManager();
+        async Task<System.Text.Json.JsonElement> Click()
+        {
+            var response = await CatalogEndpoints.QueueDiscogsReleases([graph.Release.DiscogsId],
+                fetcher, acquisition, queuer, db, user, jobs, options, default);
+            return System.Text.Json.JsonSerializer.SerializeToElement(((IValueHttpResult)response).Value,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        }
+        var first = await Click();
+        Assert.True(first.GetProperty("jobStarted").GetBoolean());
+        var count = first.GetProperty("queued").GetInt32();
+        Assert.True(count > 0);
+        var again = await Click();
+        Assert.Equal(0, again.GetProperty("queued").GetInt32());
+        Assert.Equal(count, again.GetProperty("results")[0].GetProperty("alreadyQueued").GetInt32());
+        var persisted = await db.WishlistItems.AsNoTracking().ToListAsync();
+        Assert.Equal(count, persisted.Count);
+        Assert.All(persisted, item => {
+            Assert.Equal(user.UserId, item.OwnerUserId);
+            Assert.Equal(WishlistItemStatus.Pending, item.Status);
+        });
+    }
+
     [Fact]
     public async Task GetRelease_ReturnsOk_ForSeededGraph()
     {

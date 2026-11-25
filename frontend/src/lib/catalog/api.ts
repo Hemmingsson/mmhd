@@ -2,7 +2,7 @@
  * Typed client for `/api/catalog` and `/api/catalog/admin`.
  * Uses the same-origin proxy prefix and {@link ApiError} from the shared API client.
  */
-import { ApiError } from '#lib/api-client.ts';
+import { ApiError, type AcquireReleasesResult } from '#lib/api-client.ts';
 import { API_PREFIX } from '#lib/library-requests.ts';
 import type {
   CatalogAcquireResultDto,
@@ -362,4 +362,11 @@ export function labelEditions(id: number, page: number, signal: AbortSignal) {
 
 export function resolveDiscogsRelease(id: number) {
   return requestJson<{ id: number }>(`${BASE}/discogs/releases/${id}/resolve`, { method: 'POST' });
+}
+
+export function queueDiscogsReleases(ids: number[]): Promise<AcquireReleasesResult> {
+  return requestJson(`${BASE}/discogs/releases/queue`, {
+    method: 'POST',
+    body: JSON.stringify(ids)
+  });
 }

@@ -6,6 +6,10 @@ using MusicHoarder.Api.Auth.EndpointFilters;
 using MusicHoarder.Api.Catalog;
 using MusicHoarder.Api.Catalog.Query;
 using MusicHoarder.Api.Options;
+using MusicHoarder.Api.Jobs;
+using MusicHoarder.Api.Artists;
+using MusicHoarder.Api.Catalog.Acquisition;
+using MusicHoarder.Api.Deezer;
 using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Persistence;
 using MusicHoarder.Api.Enrichment;
@@ -28,6 +32,7 @@ public static class CatalogEndpoints
         group.MapGet("/labels/{id:int}", GetLabel);
         group.MapGet("/discogs/labels/{id:long:min(1)}/releases", ListDiscogsLabelReleases);
         group.MapPost("/discogs/releases/{id:long:min(1)}/resolve", ResolveDiscogsRelease);
+        group.MapPost("/discogs/releases/queue", QueueDiscogsReleases);
         group.MapGet("/masters", ListMasters);
         group.MapGet("/masters/{id:int}", GetMaster);
         group.MapGet("/releases", ListReleases);
@@ -92,6 +97,57 @@ public static class CatalogEndpoints
     {
         var release = await fetcher.EnsureReleaseAsync(id, ct: ct);
         return release == null ? Results.NotFound() : Results.Ok(new { release.Id });
+    }
+
+    internal static async Task<IResult> QueueDiscogsReleases(long[] releaseIds, ICatalogFetcher fetcher,
+        ICatalogAcquisitionService acquisition, ArtistReleaseQueuer queuer, MusicHoarderDbContext db, ICurrentUserAccessor user, JobManager jobs,
+        IOptions<MusicEnricherOptions> options, CancellationToken ct)
+    {
+        if (!options.Value.EnableWishlistDownloads)
+            return Results.Conflict(new { message = "Downloads are off on this server." });
+        if (releaseIds.Length == 0 || releaseIds.Any(id => id < 1)) return Results.BadRequest();
+
+        var ids = releaseIds.Distinct().ToArray();
+        var budget = Math.Max(1, options.Value.ArtistRequestMaxTracks);
+        var queued = 0;
+        var started = false;
+        var results = new List<ArtistDiscographyEndpoints.AcquireReleaseResult>();
+        foreach (var id in ids.Take(200))
+        {
+            if (queued >= budget) break;
+            var release = await fetcher.EnsureReleaseAsync(id, ct: ct);
+            var result = release == null ? null :
+                await acquisition.AcquireAsync(user.UserId, release.Id, null, ct, budget - queued);
+            if (release != null && result?.Status == "unavailable")
+            {
+                var edition = await db.CatalogReleases.AsNoTracking().Include(r => r.Tracks)
+                    .Include(r => r.Credits).Include(r => r.Formats).SingleAsync(r => r.Id == release.Id, ct);
+                var tracks = edition.Tracks.Where(t => t.Type == "track" && !string.IsNullOrWhiteSpace(t.Title))
+                    .OrderBy(t => t.Sequence).Select((t, i) => new DeezerAlbumTrackItem(
+                        t.DiscNumber ?? 1, t.TrackNumber ?? i + 1, t.Title, (t.DurationSeconds ?? 0) * 1000, null,
+                        edition.Credits.Where(c => c.TrackSequence == t.Sequence && c.Kind == CatalogCreditKind.Main)
+                            .OrderBy(c => c.Sequence).Select(c => c.Name).FirstOrDefault())).ToList();
+                if (tracks.Count > 0 && !string.IsNullOrWhiteSpace(edition.ArtistDisplay))
+                {
+                    var detail = new DeezerAlbumDetail(id.ToString(), edition.Title, edition.ArtistDisplay,
+                        edition.Year, edition.Thumb, tracks);
+                    var fallback = await queuer.QueueTracklistAsync(user.UserId, edition.ArtistDisplay, detail,
+                        EnrichmentProvider.Discogs, CatalogAcquisitionService.KindFromRelease(edition),
+                        WishlistItemOrigin.ArtistRequest, budget - queued, true, ct);
+                    result = new("queued", fallback.Queued + fallback.Requeued, null, fallback.Error, [],
+                        fallback.AlreadyOwned, fallback.AlreadyQueued, fallback.Capped);
+                }
+            }
+            var count = result?.Queued ?? 0;
+            queued += count;
+            // Start after the wishlist commit, including when a later edition fails or the caller leaves.
+            if (count > 0) started |= jobs.TryStartJob(JobType.Download, out _, out _);
+            results.Add(new(id.ToString(), release?.Title, count, 0, result?.AlreadyOwned ?? 0,
+                result?.AlreadyQueued ?? 0, result?.Capped ?? 0, result?.Status == "already-owned"
+                    ? null : result?.Message ?? (result == null ? "Release not found." : null)));
+        }
+        return Results.Ok(new { queued, capped = results.Sum(r => r.Capped),
+            skippedReleases = ids.Length - results.Count, jobStarted = started, results });
     }
 
     internal static async Task<IResult> ListMasters(

@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { SvelteMap } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { onMount, untrack } from 'svelte';
-  import { labelEditions, resolveDiscogsRelease } from '#lib/catalog/api.ts';
-  import CatalogAvailabilityPanel from '#lib/catalog/components/CatalogAvailabilityPanel.svelte';
+  import { labelEditions, queueDiscogsReleases } from '#lib/catalog/api.ts';
+  import { Download, LoaderCircle, Check } from '@lucide/svelte';
+  import { toast } from 'svelte-sonner';
+  import { acquireSummary } from '#lib/artist-discography.ts';
+  import * as AlertDialog from '#lib/components/ui/alert-dialog/index.ts';
 
   import CatalogReleaseCard from '#lib/catalog/components/CatalogReleaseCard.svelte';
   import type { CatalogDiscographyItemDto as LabelEdition } from '#lib/catalog/types.ts';
@@ -15,8 +18,9 @@
   let error = $state(false);
   const controller = new AbortController();
   let sort = $state('newest');
-  let open = $state<number | null>(null);
-  let detail = $state<Promise<{ id: number }> | null>(null);
+  let confirmAll = $state(false);
+  const pending = new SvelteSet<number>();
+  const finished = new SvelteSet<number>();
   let limit = $state(50);
   const ordered = $derived(
     entries.toSorted((a, b) => {
@@ -29,6 +33,7 @@
       return (a.title ?? '').localeCompare(b.title ?? '') || a.discogsId - b.discogsId;
     })
   );
+  const remaining = $derived(ordered.filter((row) => !finished.has(row.discogsId)));
   async function load() {
     busy = true;
     error = false;
@@ -53,20 +58,39 @@
     void load();
     return () => controller.abort();
   });
-  function select(edition: LabelEdition) {
-    if (open === edition.discogsId) {
-      open = null;
-      detail = null;
-      return;
+  async function queue(rows: LabelEdition[]) {
+    if (!rows.length || pending.size) return;
+    const ids = rows.map((row) => row.discogsId);
+    for (const id of ids) pending.add(id);
+    const title = rows.length === 1 ? rows[0].title : `${rows.length} releases`;
+    try {
+      const result = await queueDiscogsReleases(ids);
+      for (const item of result.results) {
+        if (!item.error && !item.capped && (item.queued || item.alreadyOwned || item.alreadyQueued))
+          finished.add(Number(item.key));
+      }
+      const detail = result.results.length === 1 ? result.results[0].error : null;
+      if (detail && !result.queued) toast.error(title, { description: detail });
+      else if (result.queued) toast.success(title, { description: acquireSummary(result) });
+      else toast(title, { description: acquireSummary(result) });
+    } catch (e) {
+      toast.error(title, {
+        description: e instanceof Error ? e.message : 'Could not queue this request.'
+      });
+    } finally {
+      pending.clear();
     }
-    open = edition.discogsId;
-    detail = resolveDiscogsRelease(edition.discogsId);
   }
 </script>
 
 <section class="my-6" aria-label="Discogs releases">
   <header class="flex flex-wrap items-baseline justify-between gap-2">
     <h2 class="text-title-2 font-bold">Discogs releases{total !== null ? ' · ' + total : ''}</h2>
+    {#if remaining.length > 1}<button
+        class="bg-primary/10 text-primary ml-auto inline-flex items-center gap-2 rounded-full px-3 py-1"
+        disabled={busy || error || pending.size > 0}
+        onclick={() => (confirmAll = true)}><Download class="size-4" />Get all missing</button
+      >{/if}
     <label
       >Sort <select bind:value={sort}
         ><option value="newest">Newest first</option><option value="oldest">Oldest first</option
@@ -91,26 +115,39 @@
         class="min-w-0 flex-1"
       />
       <button
-        class="text-primary shrink-0"
-        aria-expanded={open === row.discogsId}
-        aria-label={(open === row.discogsId
-          ? 'Close download options for '
-          : 'Download options for ') + row.title}
-        onclick={() => select(row)}>{open === row.discogsId ? 'Close' : 'Download options'}</button
+        class="bg-primary text-primary-foreground grid size-10 shrink-0 place-items-center rounded-full disabled:opacity-70"
+        aria-label={'Get ' + row.title}
+        title={finished.has(row.discogsId) ? 'Already handled' : 'Get this release'}
+        disabled={pending.size > 0 || finished.has(row.discogsId)}
+        onclick={() => queue([row])}
       >
+        {#if pending.has(row.discogsId)}<LoaderCircle
+            class="size-5 animate-spin"
+          />{:else if finished.has(row.discogsId)}<Check class="size-5" />{:else}<Download
+            class="size-5"
+          />{/if}
+      </button>
     </div>
-    {#if open === row.discogsId && detail}
-      {#await detail}<p role="status">Checking release…</p>{:then release}
-        {#key release.id}<CatalogAvailabilityPanel releaseId={release.id} />{/key}
-      {:catch}<p>
-          Couldn’t load this edition. <button
-            onclick={() => (detail = resolveDiscogsRelease(row.discogsId))}>Retry</button
-          >
-        </p>{/await}
-    {/if}
   {/each}
   {#if !busy && !error && !entries.length}<p>Discogs lists no releases for this label.</p>{/if}
   {#if entries.length > limit}<button class="text-primary my-3" onclick={() => (limit += 50)}
       >Show more releases</button
     >{/if}
 </section>
+
+<AlertDialog.Root bind:open={confirmAll}>
+  <AlertDialog.Content
+    ><AlertDialog.Header
+      ><AlertDialog.Title>Get missing tracks from {remaining.length} releases?</AlertDialog.Title>
+      <AlertDialog.Description
+        >Queue missing tracks for download. Tracks already owned or on the way are skipped. The
+        server’s request limit applies.</AlertDialog.Description
+      ></AlertDialog.Header
+    >
+    <AlertDialog.Footer
+      ><AlertDialog.Cancel>Cancel</AlertDialog.Cancel><AlertDialog.Action
+        onclick={() => void queue(remaining)}>Get missing tracks</AlertDialog.Action
+      ></AlertDialog.Footer
+    ></AlertDialog.Content
+  >
+</AlertDialog.Root>

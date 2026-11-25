@@ -216,7 +216,8 @@ public sealed record CatalogAcquireResultDto(
     int Queued,
     string? ProviderEditionId,
     string? Message,
-    IReadOnlyList<CatalogPurchaseLinkDto> PurchaseLinks);
+    IReadOnlyList<CatalogPurchaseLinkDto> PurchaseLinks,
+    int AlreadyOwned = 0, int AlreadyQueued = 0, int Capped = 0);
 
 public sealed record CatalogIdentityCandidateDto(
     int DecisionId, string TargetKind, long DiscogsId, string? TargetName, string Method,
