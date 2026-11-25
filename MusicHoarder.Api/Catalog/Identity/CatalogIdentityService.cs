@@ -377,12 +377,108 @@ public sealed class CatalogIdentityService(
             .FirstOrDefaultAsync(d => d.Id == decisionId && d.OwnerUserId == ownerId, ct);
         if (decision is null)
             return false;
+        if (decision.Status == CatalogIdentityStatus.Rejected)
+            return true;
+
+        var now = DateTime.UtcNow;
+        if (decision.Status is CatalogIdentityStatus.AutoAccepted or CatalogIdentityStatus.Chosen
+            && decision.SubjectKind == CatalogIdentitySubject.LibraryAlbum)
+        {
+            await RevertAlbumAcceptanceAsync(ownerId, decision, now, ct);
+        }
 
         decision.Status = CatalogIdentityStatus.Rejected;
-        decision.DecidedAtUtc = DateTime.UtcNow;
+        decision.DecidedAtUtc = now;
         decision.DecidedBy = decidedBy;
         await db.SaveChangesAsync(ct);
         return true;
+    }
+
+    /// <summary>
+    /// Undoes the song ids an accepted album decision wrote. A change belongs to the acceptance when it
+    /// set the decision's own id (release, or master for master targets) or was written in the same apply
+    /// batch (same source and timestamp). A field is only restored while it still holds the value the
+    /// change wrote, so later user edits survive.
+    /// </summary>
+    private async Task RevertAlbumAcceptanceAsync(Guid ownerId, CatalogIdentityDecision decision, DateTime now, CancellationToken ct)
+    {
+        var songs = (await db.Songs
+                .IgnoreQueryFilters()
+                .Where(s => s.OwnerUserId == ownerId && s.Album != null)
+                .ToListAsync(ct))
+            .Where(s => DiscogsMatchScoring.AlbumSubjectKey(s.AlbumArtist ?? s.Artist ?? string.Empty, s.Album!) == decision.SubjectKey)
+            .ToDictionary(s => s.Id);
+        if (songs.Count == 0)
+            return;
+
+        var songIds = songs.Keys.ToList();
+        var changes = await db.SongMetadataChanges
+            .IgnoreQueryFilters()
+            .Where(c => songIds.Contains(c.SongId)
+                && c.RevertedAtUtc == null
+                && c.AppliedAtUtc != null
+                && (c.FieldName == nameof(SongMetadata.DiscogsReleaseId)
+                    || c.FieldName == nameof(SongMetadata.DiscogsMasterId)
+                    || c.FieldName == nameof(SongMetadata.DiscogsArtistId))
+                && (c.Source == DefaultChangeSource || c.Source.StartsWith("discogs-run:")))
+            .ToListAsync(ct);
+
+        var anchorField = decision.TargetKind == CatalogEntityKind.Master
+            ? nameof(SongMetadata.DiscogsMasterId)
+            : nameof(SongMetadata.DiscogsReleaseId);
+        var anchorValue = decision.DiscogsId.ToString();
+
+        foreach (var songChanges in changes.GroupBy(c => c.SongId))
+        {
+            var song = songs[songChanges.Key];
+            var batches = songChanges
+                .Where(c => c.FieldName == anchorField && c.NewValue == anchorValue)
+                .Select(c => (c.Source, c.CreatedAtUtc))
+                .ToHashSet();
+            if (batches.Count == 0)
+                continue;
+
+            var owned = songChanges.Where(c => batches.Contains((c.Source, c.CreatedAtUtc)));
+            foreach (var field in owned.GroupBy(c => c.FieldName))
+            {
+                var current = ReadDiscogsField(song, field.Key);
+                var change = field
+                    .Where(c => string.Equals(c.NewValue, current, StringComparison.Ordinal))
+                    .OrderByDescending(c => c.CreatedAtUtc)
+                    .ThenByDescending(c => c.Id)
+                    .FirstOrDefault();
+                if (change is null)
+                    continue;
+
+                WriteDiscogsField(song, field.Key, change.OldValue);
+                change.RevertedAtUtc = now;
+            }
+        }
+    }
+
+    private static string? ReadDiscogsField(SongMetadata song, string fieldName) => fieldName switch
+    {
+        nameof(SongMetadata.DiscogsReleaseId) => song.DiscogsReleaseId?.ToString(),
+        nameof(SongMetadata.DiscogsMasterId) => song.DiscogsMasterId?.ToString(),
+        nameof(SongMetadata.DiscogsArtistId) => song.DiscogsArtistId?.ToString(),
+        _ => null,
+    };
+
+    private static void WriteDiscogsField(SongMetadata song, string fieldName, string? value)
+    {
+        long? parsed = string.IsNullOrWhiteSpace(value) ? null : long.Parse(value);
+        switch (fieldName)
+        {
+            case nameof(SongMetadata.DiscogsReleaseId):
+                song.DiscogsReleaseId = parsed;
+                break;
+            case nameof(SongMetadata.DiscogsMasterId):
+                song.DiscogsMasterId = parsed;
+                break;
+            case nameof(SongMetadata.DiscogsArtistId):
+                song.DiscogsArtistId = parsed;
+                break;
+        }
     }
 
     public async Task<IReadOnlyList<CatalogIdentityDecisionDto>> ListReviewAsync(Guid ownerId, int limit, CancellationToken ct = default)
