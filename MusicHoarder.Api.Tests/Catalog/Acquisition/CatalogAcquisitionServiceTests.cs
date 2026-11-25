@@ -92,6 +92,31 @@ public class CatalogAcquisitionServiceTests
         Assert.Equal(CatalogTestKit.OwnerA, call.OwnerId);
     }
 
+    [Theory]
+    [InlineData("""["LP","Album","Repress"]""", "Deep Cuts", ArtistReleaseKinds.Album)]
+    [InlineData("""["12\"","EP"]""", null, ArtistReleaseKinds.Ep)]
+    [InlineData("""["7\"","Maxi-Single"]""", null, ArtistReleaseKinds.Single)]
+    [InlineData("""["LP","Compilation"]""", null, ArtistReleaseKinds.Compilation)]
+    public async Task Acquire_QueuesTheKindNamedByWholeFormatWords(
+        string descriptions, string? text, ArtistReleaseKinds expected)
+    {
+        await using var db = CatalogTestKit.NewContext();
+        var graph = CatalogTestKit.SeedDiscogsOnlyRelease(db);
+        var format = db.CatalogReleaseFormats.Local.Single(f => f.ReleaseId == graph.Release.Id);
+        format.DescriptionsJson = descriptions;
+        format.Text = text;
+        graph.Release.FormatSummary = "Vinyl";
+        await db.SaveChangesAsync();
+        var deezer = new CatalogFakeDeezer();
+        deezer.Candidates.Add(new DeezerAlbumCandidate("77", graph.Release.Title, graph.Release.ArtistDisplay));
+        deezer.Albums["77"] = Album(graph, "77");
+        var queuer = new RecordingQueuer { Result = new ReleaseQueueResult("Lyot Rmx", 1, Queued: 2, 0, 0, 0, 0) };
+
+        await Create(db, deezer, queuer).AcquireAsync(CatalogTestKit.OwnerA, graph.Release.Id, "77");
+
+        Assert.Equal(expected, Assert.Single(queuer.Calls).Kind);
+    }
+
     [Fact]
     public async Task Acquire_AlreadyOwned_WhenAllTracksOwned()
     {

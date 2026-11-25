@@ -347,25 +347,32 @@ public sealed class CatalogAcquisitionService(
 
     private static ArtistReleaseKinds KindFromRelease(CatalogRelease release)
     {
-        var summary = (release.FormatSummary ?? string.Empty).ToLowerInvariant();
+        // Whole words only: format text such as "Repress" or "Deep Cuts" must not read as an EP.
         foreach (var format in release.Formats)
         {
-            var blob = $"{format.Name} {format.Text} {format.DescriptionsJson}".ToLowerInvariant();
-            if (blob.Contains("single", StringComparison.Ordinal))
-                return ArtistReleaseKinds.Single;
-            if (blob.Contains("ep", StringComparison.Ordinal) || summary.Contains("ep", StringComparison.Ordinal))
-                return ArtistReleaseKinds.Ep;
-            if (blob.Contains("compilation", StringComparison.Ordinal) || blob.Contains("compile", StringComparison.Ordinal))
-                return ArtistReleaseKinds.Compilation;
+            var kind = KindFromWords(FormatWords($"{format.Name} {format.Text} {format.DescriptionsJson}"));
+            if (kind is not null)
+                return kind.Value;
         }
 
-        if (summary.Contains("single", StringComparison.Ordinal))
+        return KindFromWords(FormatWords(release.FormatSummary)) ?? DefaultQueueKind;
+    }
+
+    private static HashSet<string> FormatWords(string? text) =>
+        System.Text.RegularExpressions.Regex.Split(text ?? string.Empty, @"[^\p{L}\p{N}]+")
+            .Where(w => w.Length > 0)
+            .Select(w => w.ToLowerInvariant())
+            .ToHashSet(StringComparer.Ordinal);
+
+    private static ArtistReleaseKinds? KindFromWords(HashSet<string> words)
+    {
+        if (words.Contains("single"))
             return ArtistReleaseKinds.Single;
-        if (summary.Contains(" ep", StringComparison.Ordinal) || summary.StartsWith("ep", StringComparison.Ordinal))
+        if (words.Contains("ep"))
             return ArtistReleaseKinds.Ep;
-        if (summary.Contains("compilation", StringComparison.Ordinal))
+        if (words.Contains("compilation"))
             return ArtistReleaseKinds.Compilation;
-        return DefaultQueueKind;
+        return null;
     }
 
     private static bool IsAudioTrack(string? type) =>
