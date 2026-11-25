@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Discogs;
+using MusicHoarder.Api.Enrichment;
 using MusicHoarder.Api.Options;
 using MusicHoarder.Api.Persistence;
 
@@ -34,49 +35,61 @@ public sealed class CatalogImageDownloader(
         var root = options.CurrentValue.ImageDirectory;
         Directory.CreateDirectory(root);
 
-        var downloaded = 0;
+        var attempted = 0;
         foreach (var image in pending)
         {
             ct.ThrowIfCancellationRequested();
             try
             {
-                var bytes = await client.DownloadImageAsync(image.SourceUrl, ct);
-                if (bytes is null || bytes.Content.Length == 0)
-                {
-                    Fail(image, "Empty image response");
-                    continue;
-                }
-
-                var checksum = Convert.ToHexString(SHA256.HashData(bytes.Content)).ToLowerInvariant();
-                var ext = ExtensionFor(bytes.ContentType, image.SourceUrl);
-                var discogsId = await ResolveDiscogsIdAsync(image.EntityKind, image.EntityId, ct);
-                var kind = image.EntityKind.ToString().ToLowerInvariant();
-                var relative = Path.Combine(kind, discogsId.ToString(), $"{checksum}{ext}");
-                var absolute = Path.Combine(root, relative);
-                Directory.CreateDirectory(Path.GetDirectoryName(absolute)!);
-
-                var temp = absolute + ".tmp";
-                await File.WriteAllBytesAsync(temp, bytes.Content, ct);
-                File.Move(temp, absolute, overwrite: true);
-
-                image.Checksum = checksum;
-                image.LocalPath = relative.Replace('\\', '/');
-                image.ContentType = bytes.ContentType;
-                image.ByteSize = bytes.Content.Length;
-                image.Status = CatalogImageStatus.Downloaded;
-                image.DownloadedAtUtc = time.GetUtcNow().UtcDateTime;
-                image.LastError = null;
-                downloaded++;
+                await DownloadOneAsync(image, root, ct);
+            }
+            catch (ProviderRateLimitedException)
+            {
+                // The rate-limited image stays Remote for a later pass; keep what this pass finished.
+                await db.SaveChangesAsync(ct);
+                throw;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogWarning(ex, "Failed to download catalog image {ImageId}", image.Id);
                 Fail(image, ex.Message);
             }
+
+            attempted++;
         }
 
         await db.SaveChangesAsync(ct);
-        return downloaded;
+        return attempted;
+    }
+
+    private async Task DownloadOneAsync(CatalogImage image, string root, CancellationToken ct)
+    {
+        var bytes = await client.DownloadImageAsync(image.SourceUrl, ct);
+        if (bytes is null || bytes.Content.Length == 0)
+        {
+            Fail(image, "Empty image response");
+            return;
+        }
+
+        var checksum = Convert.ToHexString(SHA256.HashData(bytes.Content)).ToLowerInvariant();
+        var ext = ExtensionFor(bytes.ContentType, image.SourceUrl);
+        var discogsId = await ResolveDiscogsIdAsync(image.EntityKind, image.EntityId, ct);
+        var kind = image.EntityKind.ToString().ToLowerInvariant();
+        var relative = Path.Combine(kind, discogsId.ToString(), $"{checksum}{ext}");
+        var absolute = Path.Combine(root, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(absolute)!);
+
+        var temp = absolute + ".tmp";
+        await File.WriteAllBytesAsync(temp, bytes.Content, ct);
+        File.Move(temp, absolute, overwrite: true);
+
+        image.Checksum = checksum;
+        image.LocalPath = relative.Replace('\\', '/');
+        image.ContentType = bytes.ContentType;
+        image.ByteSize = bytes.Content.Length;
+        image.Status = CatalogImageStatus.Downloaded;
+        image.DownloadedAtUtc = time.GetUtcNow().UtcDateTime;
+        image.LastError = null;
     }
 
     private void Fail(CatalogImage image, string error)

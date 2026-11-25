@@ -117,6 +117,36 @@ public class DiscogsEnrichmentProviderTests
     }
 
     [Fact]
+    public async Task NearlySpentAllowance_IsRateLimitedWithoutCallingTheClient()
+    {
+        var client = new FixtureDiscogsClient
+        {
+            LastRateLimit = new DiscogsRateLimitSnapshot(60, 57, 3, DateTime.UtcNow.AddSeconds(-10)),
+        };
+
+        var outcome = await Provider(client, out _).TryEnrichAsync(Song());
+
+        var retryAfter = Assert.IsType<ProviderRateLimited>(outcome).RetryAfter;
+        Assert.InRange(retryAfter, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(60));
+        Assert.Empty(client.Calls);
+    }
+
+    [Theory]
+    [InlineData(6, -10)]  // above the reserve
+    [InlineData(0, -61)]  // spent, but over a minute ago: the window has moved on
+    [InlineData(null, -1)] // no remaining header
+    public async Task AllowanceThatIsNotNearlySpent_StillCallsTheClient(int? remaining, int observedSecondsAgo)
+    {
+        var client = new FixtureDiscogsClient
+        {
+            LastRateLimit = new DiscogsRateLimitSnapshot(60, null, remaining, DateTime.UtcNow.AddSeconds(observedSecondsAgo)),
+        };
+
+        Assert.IsType<ProviderMatched>(await Provider(client, out _).TryEnrichAsync(Song()));
+        Assert.NotEmpty(client.Calls);
+    }
+
+    [Fact]
     public void Switches_GateTheProvider()
     {
         var client = new FixtureDiscogsClient();
@@ -275,7 +305,7 @@ public class DiscogsEnrichmentProviderTests
 
         public bool IsEnabled => true;
         public bool IsAuthenticated => Authenticated;
-        public DiscogsRateLimitSnapshot? LastRateLimit => null;
+        public DiscogsRateLimitSnapshot? LastRateLimit { get; init; }
 
         public Task<DiscogsDocument<DiscogsArtist>?> GetArtistAsync(long id, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<DiscogsDocument<DiscogsLabel>?> GetLabelAsync(long id, CancellationToken ct = default) => throw new NotSupportedException();

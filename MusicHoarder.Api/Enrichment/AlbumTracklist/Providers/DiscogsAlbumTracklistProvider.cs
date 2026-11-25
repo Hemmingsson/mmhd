@@ -8,8 +8,9 @@ using MusicHoarder.Api.Persistence;
 namespace MusicHoarder.Api.Enrichment.AlbumTracklist.Providers;
 
 /// <summary>
-/// Album tracklists from Discogs: the master's main release, found by artist + album. One more
-/// candidate for <see cref="AlbumTracklistReconciler"/>, which still decides the canonical list.
+/// Album tracklists from Discogs: the master's main release, found by artist + album. A supporting
+/// candidate for <see cref="AlbumTracklistReconciler"/>: it never votes on the edition, the slots or a
+/// track's contest, and only corroborates tracks the voting providers already list.
 /// Off unless <see cref="DiscogsOptions.EnableTracklistProvider"/>; needs a token to search.
 /// </summary>
 public sealed class DiscogsAlbumTracklistProvider(

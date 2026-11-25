@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using MusicHoarder.Api.Discogs;
+using MusicHoarder.Api.Library;
 
 namespace MusicHoarder.Api.Catalog.Identity;
 
@@ -141,13 +142,7 @@ public static partial class DiscogsMatchScoring
     /// <summary>Score a search hit when the full release is not yet loaded (weaker evidence).</summary>
     public static double ScoreSearchHit(LibraryAlbumHint library, DiscogsSearchResult hit)
     {
-        var title = hit.Title ?? string.Empty;
-        // Discogs search titles are often "Artist - Album".
-        var albumPart = title;
-        var dash = title.LastIndexOf(" - ", StringComparison.Ordinal);
-        if (dash >= 0)
-            albumPart = title[(dash + 3)..];
-
+        var (_, albumPart) = SplitSearchTitle(hit.Title);
         if (!TitlesEqual(library.Album, albumPart))
             return 0;
 
@@ -170,6 +165,33 @@ public static partial class DiscogsMatchScoring
         }
 
         return Math.Clamp(score, 0, 1);
+    }
+
+    /// <summary>
+    /// Splits a Discogs search title, usually "Artist - Album", into its parts. Artist is null when
+    /// the title has no separator.
+    /// </summary>
+    public static (string? Artist, string Album) SplitSearchTitle(string? title)
+    {
+        var text = title ?? string.Empty;
+        var dash = text.LastIndexOf(" - ", StringComparison.Ordinal);
+        return dash < 0 ? (null, text) : (text[..dash], text[(dash + 3)..]);
+    }
+
+    /// <summary>
+    /// Whether the artist part of a search hit's title is the library album artist. Discogs credits
+    /// compilations to "Various", which matches any various-artists sentinel on the library side.
+    /// A title without an artist part never matches.
+    /// </summary>
+    public static bool SearchHitArtistMatches(LibraryAlbumHint library, DiscogsSearchResult hit)
+    {
+        var (artist, _) = SplitSearchTitle(hit.Title);
+        if (string.IsNullOrWhiteSpace(artist))
+            return false;
+        if (ArtistsEqual(library.AlbumArtist, artist))
+            return true;
+        return DestinationPathResolver.IsVariousArtistsSentinel(library.AlbumArtist)
+            && DestinationPathResolver.IsVariousArtistsSentinel(CatalogKeys.StripDisambiguator(artist));
     }
 
     public static string FormatReleaseArtist(IReadOnlyList<DiscogsArtistRef>? artists)

@@ -50,7 +50,12 @@ public interface ICatalogFetcher
 /// <summary>Downloads pending image variants (Discogs:DownloadImages) into Discogs:ImageDirectory.</summary>
 public interface ICatalogImageDownloader
 {
-    /// <returns>Images downloaded this pass.</returns>
+    /// <returns>
+    /// Images attempted this pass (downloaded, failed or not found); 0 only when none was pending
+    /// (or downloads are off). A rate limit stops the pass and propagates as
+    /// <see cref="Enrichment.ProviderRateLimitedException"/>, leaving that image pending; images
+    /// finished before it are saved.
+    /// </returns>
     Task<int> DownloadPendingAsync(int maxImages, CancellationToken ct = default);
 }
 

@@ -26,6 +26,14 @@ public sealed class DiscogsEnrichmentProvider(
     /// <summary>Below this the candidate is kept for review history but laid over nothing.</summary>
     public const double MatchThreshold = 0.8;
 
+    /// <summary>
+    /// Requests left in the allowance at or below which a song skips Discogs rather than queue on the
+    /// client's request gate or its 429 retries. Discogs counts the allowance over a moving minute.
+    /// </summary>
+    public const int RateLimitReserve = 5;
+
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(60);
+
     public string Name => nameof(EnrichmentProvider.Discogs);
 
     /// <summary>After every voting provider: nothing it finds changes what they search for.</summary>
@@ -44,6 +52,13 @@ public sealed class DiscogsEnrichmentProvider(
         var albumArtist = string.IsNullOrWhiteSpace(song.AlbumArtist) ? song.Artist : song.AlbumArtist;
         if (string.IsNullOrWhiteSpace(albumArtist) || string.IsNullOrWhiteSpace(song.Album))
             return new ProviderNoMatch();
+
+        if (client.LastRateLimit is { Remaining: { } remaining } snapshot && remaining <= RateLimitReserve)
+        {
+            var windowLeft = snapshot.ObservedAtUtc + RateLimitWindow - DateTime.UtcNow;
+            if (windowLeft > TimeSpan.Zero)
+                return new ProviderRateLimited(windowLeft < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : windowLeft);
+        }
 
         DiscogsAlbumMatch? match;
         try

@@ -178,8 +178,16 @@ public static class CatalogAdminEndpoints
         int id,
         int? batchSize,
         ICatalogBackfillService backfill,
+        MusicHoarderDbContext db,
+        ICurrentUserAccessor currentUser,
         CancellationToken ct)
     {
+        var owned = await db.CatalogBackfillRuns
+            .IgnoreQueryFilters()
+            .AnyAsync(r => r.Id == id && r.OwnerUserId == currentUser.UserId, ct);
+        if (!owned)
+            return TypedResults.NotFound();
+
         try
         {
             var run = await backfill.RunBatchAsync(id, batchSize ?? 50, ct);

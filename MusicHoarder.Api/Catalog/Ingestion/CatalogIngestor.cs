@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Options;
 using MusicHoarder.Api.Discogs;
 using MusicHoarder.Api.Options;
@@ -23,7 +24,8 @@ public sealed partial class CatalogIngestor(
     /// <summary>
     /// Every write goes through one process-wide lock: enrichment, the backfill and admin ingests can
     /// reach the same artist, label or style at once, and two scopes inserting the same Discogs id would
-    /// hit the unique index. A failed write clears the tracker so the caller's scope stays usable.
+    /// hit the unique index. A failed write detaches only what it touched (see <see cref="ForgetFailedWrite"/>)
+    /// so the caller's scope stays usable and keeps its own tracked rows.
     /// </summary>
     private static readonly SemaphoreSlim WriteLock = new(1, 1);
 
@@ -32,17 +34,101 @@ public sealed partial class CatalogIngestor(
         await WriteLock.WaitAsync(ct);
         try
         {
-            return await write();
-        }
-        catch
-        {
-            db.ChangeTracker.Clear();
-            throw;
+            var trackedBefore = db.ChangeTracker.Entries()
+                .ToDictionary(e => e.Entity, e => e.State, ReferenceEqualityComparer.Instance);
+            try
+            {
+                return await write();
+            }
+            catch
+            {
+                ForgetFailedWrite(trackedBefore);
+                throw;
+            }
         }
         finally
         {
             WriteLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Detaches every row the failed write added, loaded, edited or deleted, plus any row still pointing
+    /// at one of those, so the caller's next SaveChanges cannot persist half an ingest. Rows tracked before
+    /// the write that it did not edit keep their state (a pending caller change stays pending). Rows the
+    /// write's own intermediate saves already stored are reloaded from the database on the next query.
+    /// </summary>
+    private void ForgetFailedWrite(Dictionary<object, EntityState> trackedBefore)
+    {
+        var tracker = db.ChangeTracker;
+        var autoDetect = tracker.AutoDetectChangesEnabled;
+        try
+        {
+            tracker.DetectChanges();
+            tracker.AutoDetectChangesEnabled = false;
+
+            var kept = new List<EntityEntry>();
+            var dropped = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            foreach (var entry in tracker.Entries().ToList())
+            {
+                if (TouchedByWrite(entry, trackedBefore))
+                    dropped.Add(entry.Entity);
+                else
+                    kept.Add(entry);
+            }
+
+            bool grew;
+            do
+            {
+                grew = false;
+                for (var i = kept.Count - 1; i >= 0; i--)
+                {
+                    if (!PointsAtAny(kept[i], dropped)) continue;
+                    dropped.Add(kept[i].Entity);
+                    kept.RemoveAt(i);
+                    grew = true;
+                }
+            } while (grew);
+
+            foreach (var entity in dropped)
+                db.Entry(entity).State = EntityState.Detached;
+        }
+        finally
+        {
+            tracker.AutoDetectChangesEnabled = autoDetect;
+        }
+    }
+
+    private static bool TouchedByWrite(EntityEntry entry, Dictionary<object, EntityState> trackedBefore)
+    {
+        if (!trackedBefore.TryGetValue(entry.Entity, out var before))
+            return true;
+        return entry.State switch
+        {
+            EntityState.Deleted => before != EntityState.Deleted,
+            EntityState.Modified => before == EntityState.Unchanged,
+            _ => false,
+        };
+    }
+
+    private static bool PointsAtAny(EntityEntry entry, HashSet<object> dropped)
+    {
+        foreach (var navigation in entry.Navigations)
+        {
+            switch (navigation)
+            {
+                case ReferenceEntry { CurrentValue: { } target } when dropped.Contains(target):
+                    return true;
+                case CollectionEntry { CurrentValue: { } items }:
+                    foreach (var item in items)
+                    {
+                        if (dropped.Contains(item)) return true;
+                    }
+                    break;
+            }
+        }
+
+        return false;
     }
 
     public Task<CatalogArtist> UpsertArtistAsync(DiscogsDocument<DiscogsArtist> document, CancellationToken ct = default)

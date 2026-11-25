@@ -6,8 +6,8 @@ using MusicHoarder.Api.Persistence;
 namespace MusicHoarder.Api.Catalog.Backfill;
 
 /// <summary>
-/// Periodically advances every <see cref="CatalogBackfillStatus.Running"/> run when
-/// <see cref="DiscogsOptions.EnableBackfill"/> is on.
+/// Periodically advances every <see cref="CatalogBackfillStatus.Running"/> run, and every run a failed
+/// batch paused more than an interval ago, when <see cref="DiscogsOptions.EnableBackfill"/> is on.
 /// </summary>
 public sealed class CatalogBackfillWorker(
     IServiceScopeFactory scopeFactory,
@@ -67,16 +67,20 @@ public sealed class CatalogBackfillWorker(
         }
     }
 
-    private async Task TickAsync(DiscogsOptions opts, CancellationToken ct)
+    internal async Task TickAsync(DiscogsOptions opts, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MusicHoarderDbContext>();
         var backfill = scope.ServiceProvider.GetRequiredService<ICatalogBackfillService>();
 
+        // A batch that hit a rate limit or failed pauses with LastError; once an interval has passed it
+        // is resumed (RunBatchAsync sets it Running). Paused runs without an error are left alone.
+        var resumeBefore = DateTime.UtcNow - TimeSpan.FromMinutes(Math.Max(1, opts.BackfillIntervalMinutes));
         var running = await db.CatalogBackfillRuns
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .Where(r => r.Status == CatalogBackfillStatus.Running)
+            .Where(r => r.Status == CatalogBackfillStatus.Running
+                || (r.Status == CatalogBackfillStatus.Paused && r.LastError != null && r.UpdatedAtUtc < resumeBefore))
             .Select(r => new { r.Id, r.OwnerUserId })
             .ToListAsync(ct);
 

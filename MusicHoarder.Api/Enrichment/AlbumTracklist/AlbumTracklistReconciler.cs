@@ -47,22 +47,21 @@ public static class AlbumTracklistReconciler
         double identityThreshold = DefaultIdentityThreshold)
     {
         var usable = candidates.Where(c => c.Tracks.Count > 0).ToList();
-        if (usable.Count == 0)
+
+        // A supporting provider (Discogs) never votes: it joins no cluster, adds no slot and does not
+        // count toward a track being contested. It only corroborates slots the voting providers list.
+        var voting = usable.Where(c => !FieldAuthority.IsSupporting(c.Source)).ToList();
+        if (voting.Count == 0)
             return null;
 
         // Cluster candidates whose album titles agree (editions of the same album → one cluster).
         var clusters = new List<List<AlbumTracklistCandidate>>();
-        foreach (var c in usable)
+        foreach (var c in voting)
         {
             var placed = false;
             foreach (var g in clusters)
             {
-                // No title on either side → group by track-count proximity so a title-less candidate
-                // still joins the album it clearly belongs to instead of starting a lone cluster.
-                var agree = !string.IsNullOrWhiteSpace(g[0].Title) && !string.IsNullOrWhiteSpace(c.Title)
-                    ? FuzzyTextMatch.Ratio(g[0].Title, c.Title) is double r && r >= identityThreshold
-                    : Math.Abs(g[0].Tracks.Count - c.Tracks.Count) <= 1;
-                if (agree)
+                if (SameAlbum(g[0], c, identityThreshold))
                 {
                     g.Add(c);
                     placed = true;
@@ -84,6 +83,9 @@ public static class AlbumTracklistReconciler
             .First();
 
         var clusterProviders = winning.Select(c => c.Source).Distinct().Count();
+        var supporting = usable
+            .Where(c => FieldAuthority.IsSupporting(c.Source) && SameAlbum(winning[0], c, identityThreshold))
+            .ToList();
 
         // Track-count consensus: most-voted count among the agreeing providers; contested when they differ.
         var counts = winning.Select(c => c.Tracks.Count).ToList();
@@ -117,6 +119,16 @@ public static class AlbumTracklistReconciler
                 .Select(x => x.Source)
                 .Distinct()
                 .ToList();
+            // Contested when not every provider in the cluster backs this exact track (bonus track
+            // only some editions have, or a title disagreement).
+            var contested = corroborating.Count < clusterProviders;
+            corroborating.AddRange(supporting
+                .Where(c => c.Tracks.FirstOrDefault(t => t.DiscNumber == disc && t.TrackNumber == pos) is { } track
+                    && (FuzzyTextMatch.Ratio(title, track.Title) is not double r || r >= identityThreshold))
+                .Select(c => c.Source)
+                .Distinct()
+                .Where(s => !corroborating.Contains(s))
+                .ToList());
 
             tracks.Add(new ReconciledTrack(
                 DiscNumber: disc,
@@ -126,9 +138,7 @@ public static class AlbumTracklistReconciler
                 MusicBrainzRecordingId: atSlot
                     .FirstOrDefault(x => x.Source == EnrichmentProvider.MusicBrainzWeb).Track?.ProviderRecordingId,
                 CorroboratingProviders: corroborating,
-                // Contested when not every provider in the cluster backs this exact track (bonus track
-                // only some editions have, or a title disagreement).
-                IsContested: corroborating.Count < clusterProviders));
+                IsContested: contested));
         }
 
         return new ReconciledTracklist(
@@ -143,9 +153,19 @@ public static class AlbumTracklistReconciler
             Tracks: tracks,
             Sources: candidates
                 .Where(c => c.Tracks.Count > 0)
-                .Select(c => new ReconciledSource(c.Source, c.ProviderAlbumId, c.Tracks.Count, winning.Contains(c)))
+                .Select(c => new ReconciledSource(
+                    c.Source, c.ProviderAlbumId, c.Tracks.Count, winning.Contains(c) || supporting.Contains(c)))
                 .ToList());
     }
+
+    /// <summary>
+    /// Album titles agree. With no title on either side, track-count proximity decides, so a title-less
+    /// candidate still joins the album it clearly belongs to instead of starting a lone cluster.
+    /// </summary>
+    private static bool SameAlbum(AlbumTracklistCandidate a, AlbumTracklistCandidate b, double identityThreshold)
+        => !string.IsNullOrWhiteSpace(a.Title) && !string.IsNullOrWhiteSpace(b.Title)
+            ? FuzzyTextMatch.Ratio(a.Title, b.Title) is double r && r >= identityThreshold
+            : Math.Abs(a.Tracks.Count - b.Tracks.Count) <= 1;
 
     private static int? EarliestYear(List<AlbumTracklistCandidate> cluster)
     {
